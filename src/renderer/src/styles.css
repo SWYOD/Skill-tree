@@ -1,0 +1,1735 @@
+:root {
+  /* Дефолт до применения активной темы (см. themes/apply.ts) — совпадает с
+     встроенной темой AMOLED/Watch Dogs (themes/builtins.ts), чтобы не было
+     вспышки нестилизованного контента на самом первом кадре. Сама тема
+     (в т.ч. пользовательские) применяется поверх этих значений через
+     document.documentElement.style.setProperty на каждой из --bg/--accent/…
+     ниже — здесь только цветовые переменные, не размерные/шрифтовые. */
+  --bg: #000000;
+  --bg-panel: #000000;
+  --bg-graph: #000000;
+  --surface: #0b0b0d;
+  --surface-2: #141416;
+  --hover: rgba(255, 255, 255, 0.055);
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #eceef2;
+  --text-dim: #8b8f98;
+  --text-faint: #5a5e66;
+  --accent: #8b5cf6;
+  --accent-soft: rgba(139, 92, 246, 0.18);
+  --danger: #f4676b;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: padding-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.45;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+input,
+textarea {
+  font-family: inherit;
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Toolbar ─────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.brand-icon {
+  color: var(--accent);
+}
+.brand {
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  font-size: 14px;
+}
+.tree-name {
+  padding-left: 10px;
+  margin-left: 0;
+  border-left: 1px solid var(--border);
+  font-weight: 550;
+  font-size: 13px;
+  color: var(--text-dim);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tree-name-input {
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  padding: 3px 8px;
+  font-size: 13px;
+  font-weight: 550;
+  width: 200px;
+}
+.stats {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--text-dim);
+  transition: all 0.14s ease;
+}
+.tb-btn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+.tb-btn.icon-only {
+  padding: 0 9px;
+}
+.tb-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.tb-btn.primary {
+  background: var(--accent);
+  color: #06101f;
+  font-weight: 600;
+}
+.tb-btn.primary:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.08);
+  color: #06101f;
+}
+.tb-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* ── Workspace / columns (панели-карточки как в Claude Desktop) ── */
+.workspace {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  padding: 10px;
+  gap: 0;
+  background: var(--bg);
+}
+.col {
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.center-col {
+  flex: 1 1 auto;
+  background: var(--bg-graph);
+  display: flex;
+  flex-direction: column;
+}
+.graph-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+.resizer {
+  width: 10px;
+  cursor: col-resize;
+  background: transparent;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
+}
+.resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 34px;
+  border-radius: 3px;
+  background: var(--border);
+  transition: background 0.14s;
+}
+.resizer:hover::after {
+  background: var(--accent);
+}
+
+/* ── Panels ──────────────────────────────────────────── */
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+.right-panel {
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+.panel-rail {
+  width: 34px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+  flex: 0 0 auto;
+}
+.panel-title {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--text-faint);
+}
+.panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 7px;
+  color: var(--text-dim);
+  transition: all 0.14s ease;
+}
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.icon-btn.active {
+  color: var(--accent);
+}
+.icon-btn.active.glow {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent-soft), 0 0 8px 1px var(--accent-soft);
+}
+.icon-btn.xs {
+  padding: 3px;
+}
+.icon-btn.danger:hover {
+  color: var(--danger);
+  background: rgba(244, 103, 107, 0.1);
+}
+
+/* ── Tree ────────────────────────────────────────────── */
+.tree-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 2px 8px 8px;
+}
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s;
+  /* Shift+клик в браузерах по умолчанию расширяет нативное текстовое выделение —
+     без этого визуально путается с диапазонным выделением строк дерева. */
+  user-select: none;
+}
+.tree-row:hover {
+  background: var(--hover);
+}
+.tree-row.selected {
+  background: var(--accent-soft);
+}
+.tree-row.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2.5px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+/* Мультивыделение (Ctrl/Cmd + Shift) — отличается от .selected (которая всегда
+   ровно одна, последняя кликнутая, и показывается в правой панели). Заметно
+   ярче обычного hover/selected, чтобы не потеряться среди других строк. */
+.tree-row.multi-selected {
+  background: var(--accent-soft);
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1.5px;
+}
+.tree-caret {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+/* Иконки веток/узлов и стрелочки не должны сжиматься flexbox'ом — иначе при
+   нехватке места ужимается не только текст, но и сами иконки (неравномерно,
+   в зависимости от их размера), что выглядело как «случайное» масштабирование. */
+.tree-row svg {
+  flex-shrink: 0;
+}
+.tree-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+}
+.tree-rename-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 1px 5px;
+  color: var(--text);
+}
+
+/* ── Drag-and-drop реордер/репарент ──────────────────────────────────── */
+.tree-row.dragging {
+  opacity: 0.4;
+}
+/* Скрыт с графа («глазик») — сам элемент остаётся в дереве, просто приглушён. */
+.tree-row.item-hidden {
+  opacity: 0.45;
+}
+.tree-row.item-hidden .tree-label {
+  font-style: italic;
+}
+.tree-row.drop-inside {
+  background: var(--accent-soft);
+  outline: 1.5px dashed var(--accent);
+  outline-offset: -1px;
+}
+.tree-row.drop-before::before,
+.tree-row.drop-after::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.tree-row.drop-before::before {
+  top: 0;
+}
+.tree-row.drop-after::before {
+  bottom: 0;
+}
+
+/* ── Контекстное меню элемента дерева ─────────────────────────────────── */
+.item-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 168px;
+  margin-top: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+.item-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+}
+.item-menu button:hover {
+  background: var(--hover);
+}
+.item-menu button.danger {
+  color: var(--danger);
+}
+.tree-actions {
+  display: none;
+  flex-shrink: 0;
+  gap: 1px;
+}
+.tree-row:hover .tree-actions {
+  display: flex;
+}
+
+.settings-anchor {
+  position: relative;
+}
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 16px;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+  transition: color 0.14s;
+}
+.settings-toggle:hover {
+  color: var(--text);
+}
+/* Попап настроек — плавающее меню над кнопкой (клод-стайл), а не
+   разворачивающаяся вниз панель, которая сдвигала саму кнопку. */
+.settings-popup {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 8px;
+  right: 8px;
+  max-height: min(420px, 70vh);
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 30;
+}
+.settings-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+.dir-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.dir-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+.dir-row:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.dir-row-current {
+  color: var(--accent);
+  cursor: default;
+}
+.dir-row-current:hover {
+  background: none;
+  color: var(--accent);
+}
+.dir-row-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+.settings-dir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dir-path {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  color: var(--text-dim);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.settings-row-btn {
+  width: 100%;
+  padding: 4px 0;
+  color: var(--text);
+  border-radius: 8px;
+}
+.settings-row-btn:hover {
+  color: var(--accent);
+}
+.settings-row-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/* ── Модальные окна по центру экрана (в отличие от settings-popup — те
+   всплывают у своей кнопки) — тёмная подложка, сама панель — surface-2. ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 18px 20px 22px;
+  max-width: min(680px, 92vw);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.theme-editor-btn {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong));
+}
+.beta-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.theme-import-error {
+  font-size: 12px;
+  color: var(--danger);
+  margin: -6px 0 12px;
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: var(--surface);
+  padding: 8px;
+  text-align: left;
+}
+.theme-card:hover {
+  border-color: var(--border-strong);
+}
+.theme-card.active {
+  border-color: var(--accent);
+}
+.theme-card-preview {
+  display: block;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.theme-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+}
+.theme-card-name {
+  font-size: 11.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.theme-card-check {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+.theme-card-remove {
+  flex: 0 0 auto;
+}
+.theme-card-swatches {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.theme-card-swatches span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.theme-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 14px;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  margin-top: 8px;
+}
+/* ── Toggle-switch (замена нативного checkbox для бинарных настроек) ──── */
+.switch {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.switch.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  transform: translateX(0);
+  transition: transform 0.15s ease;
+}
+.switch.on .switch-thumb {
+  background: #0a0410;
+  transform: translateX(14px);
+}
+.lock-row span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 500;
+}
+.lock-row {
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.lock-hint {
+  margin: -4px 0 10px;
+}
+.segmented {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 1 1 0;
+  padding: 5px 10px;
+  white-space: nowrap;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  transition: all 0.14s;
+}
+.seg:hover {
+  color: var(--text);
+}
+.seg.active {
+  background: var(--accent);
+  color: #0a0410;
+  font-weight: 600;
+}
+
+/* ── Статистика над графом ──────────────────────────────── */
+.stats-bar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.stats-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 14px;
+  color: var(--text-dim);
+}
+.stats-bar-head:hover {
+  background: var(--hover);
+}
+.stats-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--text-faint);
+}
+.stats-bar-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 2px 14px 12px;
+}
+.stats-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stats-label {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.stats-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.stats-period-seg {
+  padding: 2px;
+}
+.stats-period-seg .seg {
+  padding: 3px 9px;
+  font-size: 11px;
+}
+
+/* ── Панель прогресса по веткам (столбчатый график) ─────── */
+.branch-chart-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 14px 14px;
+  overflow-x: auto;
+}
+.branch-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 44px;
+  max-width: 84px;
+  flex: 1 1 0;
+}
+.branch-chart-pct {
+  font-size: 11px;
+  font-weight: 700;
+}
+.branch-chart-track {
+  position: relative;
+  width: 22px;
+  height: 64px;
+  border-radius: 5px;
+  background: var(--hover);
+}
+/* Два слоя друг на друге: полупрозрачный «призрак» — суммарный прогресс по
+   ВСЕМ пунктам чеклиста ветки (включая ещё не закрытые до конца навыки), и
+   сплошной поверх него — доля ПОЛНОСТЬЮ освоенных навыков. Оба abs-позиционированы
+   от низа трека, поэтому растут одним и тем же «дном», а не по очереди. */
+.branch-chart-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: 5px;
+  transition: height 0.3s ease;
+  z-index: 2;
+}
+.branch-chart-fill-partial {
+  opacity: 0.3;
+  z-index: 1;
+  transition: height 0.3s ease;
+}
+.branch-chart-partial-pct {
+  position: absolute;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, -100%);
+  font-size: 8.5px;
+  font-weight: 700;
+  opacity: 0.8;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.branch-chart-name {
+  font-size: 10px;
+  color: var(--text-faint);
+  max-width: 60px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Graph ───────────────────────────────────────────── */
+/* Подписи узлов (не веток) скрыты, пока не приблизят зумом — см.
+   ZOOM_LABEL_THRESHOLD в GraphCanvas.tsx. Один className на #graph-content,
+   а не пропс на каждый узел — не триггерит ре-рендер сотен NodeGlyph на тик зума. */
+#graph-content.zoom-far .node-label-leaf {
+  display: none;
+}
+/* Глубокие кольца (depth>=2) упакованы плотнее первого — их подписям нужен
+   более высокий порог зума (ZOOM_LABEL_THRESHOLD_DEEP), иначе они читаются
+   ещё до того, как между соседними узлами появилось достаточно места. */
+#graph-content:not(.zoom-deep) .node-label-deep {
+  display: none;
+}
+.graph-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-graph);
+  overflow: hidden;
+  cursor: grab;
+  /* На macOS трекпад-жесты (инерция/эластичный скролл, пинч) конкурируют с нашей
+     собственной JS-панорамой/зумом, что даёт визуальные подёргивания при
+     перетаскивании — Windows-мышь этой нативной инерции не имеет. Отключаем
+     нативную обработку жестов браузером на этом элементе полностью. */
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+.graph-wrap:active {
+  cursor: grabbing;
+}
+.graph-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text-faint);
+  pointer-events: none;
+  letter-spacing: 0.2px;
+}
+/* Поп-ап с полным названием + чеклистом при долгом зажатии узла графа (см.
+   HOVER_POPUP_DELAY в GraphCanvas.tsx) — HTML-оверлей поверх SVG,
+   позиционируется в экранных координатах узла. Цвет ветки узла задаётся через
+   CSS-переменную --node-color (НЕ через `color`+currentColor) — currentColor
+   ломался у чекбоксов внутри `.done` строк, т.к. `.done` меняет `color` под
+   зачёркнутый текст, и это же значение перебивало cascade для чекбокса. */
+.node-popup {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 18px));
+  z-index: 15;
+  min-width: 150px;
+  max-width: 240px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--node-color) 45%, var(--border-strong));
+  border-radius: 11px;
+  box-shadow: var(--shadow), 0 0 20px -6px var(--node-color);
+  /* Раньше none — из-за этого события мыши (в т.ч. колесо) проваливались
+     сквозь поп-ап прямо на граф под ним: скролл длинного чеклиста зумил граф
+     вместо прокрутки, а не хватало и pointer events чтобы вообще что-то
+     прокручивать. Теперь поп-ап сам ловит события (см. onWheel в
+     GraphCanvas.tsx, останавливает всплытие до нативного wheel-листенера
+     графа), а клик по нему уже исключён из «клика мимо» отдельной проверкой. */
+  pointer-events: auto;
+  text-align: left;
+  animation: node-popup-in 0.14s ease-out;
+}
+.node-popup::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -6px) rotate(45deg);
+  background: var(--surface-2);
+  border-right: 1px solid color-mix(in srgb, var(--node-color) 45%, var(--border-strong));
+  border-bottom: 1px solid color-mix(in srgb, var(--node-color) 45%, var(--border-strong));
+  border-radius: 0 0 3px 0;
+}
+@keyframes node-popup-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 18px + 6px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 18px));
+  }
+}
+.node-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.node-popup-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text);
+  text-align: left;
+}
+.node-popup-progress {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--node-color);
+  white-space: nowrap;
+}
+.node-popup-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 8px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  text-align: left;
+}
+.node-popup-checklist li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+}
+.node-popup-checklist li:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.node-popup-checklist li span:last-child {
+  word-break: break-word;
+}
+.node-popup-checklist li.done {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+.node-popup-checklist li.locked {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.node-popup-checklist li.locked:hover {
+  background: none;
+  color: var(--text-dim);
+}
+.node-popup-manual-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  cursor: default;
+}
+.node-popup-check {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 1.5px;
+  border-radius: 4px;
+  border: 1.3px solid color-mix(in srgb, var(--node-color) 55%, var(--border-strong));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--node-color);
+}
+.node-popup-checklist li.done .node-popup-check {
+  background: var(--node-color);
+  border-color: var(--node-color);
+  color: var(--surface-2);
+}
+.graph-controls {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.graph-controls-top {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.gc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 32px;
+  color: var(--text-dim);
+  transition: all 0.12s;
+}
+.gc-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.gc-btn.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.graph-empty {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  text-align: center;
+  pointer-events: none;
+}
+.graph-empty p {
+  margin: 3px 0;
+}
+.graph-crash {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-dim);
+  background: var(--bg-graph);
+}
+.graph-crash svg {
+  color: var(--danger);
+}
+.graph-crash p {
+  margin: 0;
+}
+.edge-flow {
+  stroke-dasharray: 7 9;
+  animation: flow 0.8s linear infinite;
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.edge-breathe {
+  animation: breathe 2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Right-panel sections (плоские внутри панели-карточки) ── */
+.block {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.block:last-child {
+  border-bottom: none;
+}
+.block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+}
+.title-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.title-input:focus,
+.checklist-add input:focus,
+.note-area:focus,
+.note-title-input:focus,
+.create-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  margin: 8px 0 14px;
+}
+.swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: transform 0.12s;
+}
+.swatch:hover {
+  transform: scale(1.15);
+}
+.swatch.active {
+  border-color: var(--bg-panel);
+  box-shadow:
+    0 0 0 2px currentColor,
+    0 0 8px currentColor;
+}
+.swatch-custom {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+}
+.link-btn {
+  color: var(--text-faint);
+  font-size: 12px;
+  text-decoration: underline;
+}
+.link-btn:hover {
+  color: var(--text-dim);
+}
+.icon-pick {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  width: 100%;
+  margin: 6px 0;
+  color: var(--text-dim);
+  transition: border-color 0.14s;
+}
+.icon-pick:hover {
+  border-color: var(--border-strong);
+}
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+  margin-top: 8px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.icon-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  transition: all 0.12s;
+}
+.icon-cell:hover,
+.icon-cell.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Progress + checklist ────────────────────────────── */
+.progress-bar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #c4b0fb);
+  border-radius: 4px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  border-radius: 7px;
+}
+.checklist li:hover {
+  background: var(--hover);
+}
+.checklist li.done .check-text {
+  text-decoration: line-through;
+  color: var(--text-faint);
+}
+.check-text {
+  flex: 1 1 auto;
+  user-select: text;
+  font-size: 13px;
+}
+.check {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #06101f;
+  flex: 0 0 auto;
+  transition: all 0.12s;
+}
+.checklist li.done .check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.check:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.checklist-add {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+.checklist-add input,
+.create-row input {
+  flex: 1 1 auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 13px;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+
+/* ── Note ────────────────────────────────────────────── */
+.note-title-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.note-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.note-toolbar .segmented {
+  flex: 1 1 auto;
+}
+.note-area {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px;
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  user-select: text;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.note-preview {
+  overflow-y: auto;
+  user-select: text;
+  cursor: text;
+}
+.note-path {
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Markdown-превью (заметки) ───────────────────────── */
+.md-preview {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.md-preview > *:first-child {
+  margin-top: 0;
+}
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4 {
+  margin: 14px 0 6px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+.md-preview h1 {
+  font-size: 18px;
+}
+.md-preview h2 {
+  font-size: 16px;
+}
+.md-preview h3 {
+  font-size: 14px;
+}
+.md-preview h4 {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.md-preview p {
+  margin: 6px 0;
+}
+.md-preview ul,
+.md-preview ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.md-preview li {
+  margin: 2px 0;
+}
+.md-preview hr {
+  margin: 14px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.md-preview code {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.md-preview pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.md-preview pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.md-preview blockquote {
+  margin: 8px 0;
+  padding: 2px 12px;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-dim);
+}
+.md-preview blockquote p {
+  margin: 4px 0;
+}
+.md-preview a {
+  color: var(--accent);
+}
+.md-callout {
+  margin: 10px 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--callout-color, var(--accent)) 40%, var(--border-strong));
+  border-left-width: 3px;
+  background: color-mix(in srgb, var(--callout-color, var(--accent)) 10%, transparent);
+}
+.md-callout-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 650;
+  font-size: 12.5px;
+  color: var(--callout-color, var(--accent));
+}
+.md-callout p {
+  margin: 5px 0 0;
+  color: var(--text-dim);
+}
+.md-callout-note,
+.md-callout-info {
+  --callout-color: #4ea1ff;
+}
+.md-callout-tip,
+.md-callout-hint {
+  --callout-color: #f4c542;
+}
+.md-callout-success,
+.md-callout-check,
+.md-callout-done {
+  --callout-color: #3ecf8e;
+}
+.md-callout-warning,
+.md-callout-caution {
+  --callout-color: #f2994a;
+}
+.md-callout-danger,
+.md-callout-error,
+.md-callout-failure {
+  --callout-color: #ef5a5a;
+}
+.md-callout-question,
+.md-callout-faq {
+  --callout-color: #bf7af0;
+}
+.md-callout-example {
+  --callout-color: #8b93a1;
+}
+.md-callout-quote,
+.md-callout-cite {
+  --callout-color: #8b93a1;
+}
+
+/* ── Полноэкранный редактор заметки (модалка) ────────── */
+.note-editor-modal {
+  max-width: min(1000px, 94vw);
+  width: 94vw;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.note-editor-modal-split {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+.note-editor-modal-pane {
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+.note-editor-modal-modes {
+  flex: 0 0 auto;
+  width: auto;
+}
+.note-editor-modal-modes .seg {
+  /* «Динамический» и «Сплит» сильно разной длины — растягивать их поровну
+     (общий .seg { flex: 1 1 0 }) сжимало короткую кнопку и выглядело просто
+     криво; здесь каждая кнопка размером по своему содержимому. */
+  flex: 0 0 auto;
+}
+.note-editor-modal-live {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── CodeMirror — «динамический» (Live Preview) редактор заметки ─────── */
+.cm-host {
+  height: 100%;
+}
+.cm-editor {
+  height: 100%;
+  color: var(--text);
+}
+.cm-editor.cm-focused {
+  outline: none;
+}
+.cm-editor .cm-content {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  line-height: 1.55;
+  caret-color: var(--accent);
+}
+.cm-editor .cm-selectionBackground {
+  background: var(--accent-soft) !important;
+}
+.cm-editor .cm-gutters {
+  display: none;
+}
+.cm-h {
+  font-weight: 700;
+  font-family: inherit;
+}
+.cm-h1 {
+  font-size: 1.5em;
+}
+.cm-h2 {
+  font-size: 1.3em;
+}
+.cm-h3 {
+  font-size: 1.15em;
+}
+.cm-h4 {
+  font-size: 1.05em;
+  color: var(--text-dim);
+}
+.cm-bold {
+  font-weight: 700;
+}
+.cm-italic {
+  font-style: italic;
+}
+.cm-code {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 3px;
+}
+.cm-link {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.cm-quote-line {
+  padding-left: 10px;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-dim);
+}
+.cm-callout-line {
+  border-left-color: var(--callout-color, var(--accent));
+  background: color-mix(in srgb, var(--callout-color, var(--accent)) 8%, transparent);
+}
+.cm-hr-line {
+  color: var(--text-faint);
+}
+.cm-fence-line,
+.cm-code-line {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  background: var(--surface);
+}
+
+/* ── Last modified card ──────────────────────────────── */
+.recent-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+  transition: border-color 0.14s;
+}
+.recent-card:hover {
+  border-color: var(--accent);
+}
+.recent-meta {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.recent-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-pct {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+/* ── Misc ────────────────────────────────────────────── */
+.dim {
+  color: var(--text-dim);
+}
+.small {
+  font-size: 12px;
+}
+.pad {
+  padding: 4px 14px 14px;
+}
+.center-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-dim);
+  background: var(--bg);
+}
+.welcome h1 {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.welcome p {
+  margin: 2px 0;
+  max-width: 380px;
+  text-align: center;
+}
+.create-row {
+  display: flex;
+  gap: 9px;
+  margin-top: 10px;
+}
