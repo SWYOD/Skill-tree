@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid'
 import { useTree } from '../store/treeStore'
 import { Switch } from '../components/Switch'
 import { MiniSkillGraph } from '../components/MiniSkillGraph'
-import { resolveAccentText } from '../themes/apply'
+import { FONT_FALLBACK_TAIL, resolveAccentText } from '../themes/apply'
 import type { ThemeDef, ThemeVars } from '@shared/types'
 
 interface Variant {
@@ -59,6 +59,7 @@ interface Props {
 export function ThemeEditor({ baseTheme, onClose }: Props): JSX.Element {
   const addCustomTheme = useTree((s) => s.addCustomTheme)
   const [name, setName] = useState(`${baseTheme.name} (копия)`)
+  const [font, setFont] = useState(baseTheme.font ?? '')
   const [dark, setDark] = useState(baseTheme.dark)
   const [primary, setPrimary] = useState<Variant>(() => cloneVariant(baseTheme, baseTheme.dark))
   const [hasAlt, setHasAlt] = useState(!!baseTheme.altVariant)
@@ -86,12 +87,14 @@ export function ThemeEditor({ baseTheme, onClose }: Props): JSX.Element {
   function handleSave(): void {
     const trimmed = name.trim()
     if (!trimmed) return
+    const trimmedFont = font.trim()
     const theme: ThemeDef = {
       id: nanoid(),
       name: trimmed,
       dark,
       vars: primary.vars,
       branchColors: primary.branchColors,
+      ...(trimmedFont ? { font: trimmedFont } : {}),
       ...(hasAlt ? { altVariant: { vars: alt.vars, branchColors: alt.branchColors } } : {})
     }
     addCustomTheme(theme)
@@ -122,6 +125,20 @@ export function ThemeEditor({ baseTheme, onClose }: Props): JSX.Element {
               onChange={(e) => setName(e.target.value)}
               placeholder="Название темы"
             />
+
+            <label className="settings-label" style={{ marginTop: 10 }}>
+              Шрифт темы (необязательно)
+            </label>
+            <input
+              className="title-input"
+              value={font}
+              onChange={(e) => setFont(e.target.value)}
+              placeholder="Например: Inter — оставь пустым для стандартного"
+              style={{ fontFamily: font ? `${font}, ${FONT_FALLBACK_TAIL}` : undefined }}
+            />
+            <p className="dim small" style={{ margin: '4px 0 0' }}>
+              Применяется, только если в настройках выбран источник шрифта «Как в теме».
+            </p>
 
             <div className="settings-row" style={{ marginTop: 2 }}>
               <span>Тёмная по умолчанию</span>
@@ -156,13 +173,13 @@ export function ThemeEditor({ baseTheme, onClose }: Props): JSX.Element {
 
           <div className="theme-editor-preview">
             <label className="settings-label">Превью — основной вид</label>
-            <ThemePreviewMock variant={primary} label={name || 'Без названия'} />
+            <ThemePreviewMock variant={primary} label={name || 'Без названия'} font={font} />
             {hasAlt && (
               <>
                 <label className="settings-label" style={{ marginTop: 4 }}>
                   Превью — {dark ? 'светлый' : 'тёмный'} вид
                 </label>
-                <ThemePreviewMock variant={alt} label={name || 'Без названия'} />
+                <ThemePreviewMock variant={alt} label={name || 'Без названия'} font={font} />
               </>
             )}
           </div>
@@ -246,12 +263,27 @@ function VariantFields({
  * на заметном, однозначно узнаваемом элементе, чтобы правка любого поля в
  * форме была сразу видна в превью.
  */
-function ThemePreviewMock({ variant, label }: { variant: Variant; label: string }): JSX.Element {
+function ThemePreviewMock({
+  variant,
+  label,
+  font
+}: {
+  variant: Variant
+  label: string
+  font: string
+}): JSX.Element {
   const v = variant.vars
   const colors = variant.branchColors.length > 0 ? variant.branchColors : [v.accent]
 
   return (
-    <div className="theme-editor-mock" style={{ background: v.bg, color: v.text }}>
+    <div
+      className="theme-editor-mock"
+      style={{
+        background: v.bg,
+        color: v.text,
+        fontFamily: font.trim() ? `${font}, ${FONT_FALLBACK_TAIL}` : undefined
+      }}
+    >
       <div
         className="theme-editor-mock-topbar"
         style={{ background: v['bg-panel'], borderBottom: `1px solid ${v.border}` }}

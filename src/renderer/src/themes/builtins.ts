@@ -156,6 +156,8 @@ export const BUILTIN_THEMES: ThemeDef[] = [
     name: 'Linear',
     dark: true,
     builtin: true,
+    // Linear реально использует Inter как основной шрифт продукта.
+    font: 'Inter',
     vars: {
       bg: '#08090a',
       'bg-panel': '#08090a',
@@ -202,6 +204,8 @@ export const BUILTIN_THEMES: ThemeDef[] = [
     name: 'GitHub Dark',
     dark: true,
     builtin: true,
+    // Реальный шрифтовой стек GitHub.
+    font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
     vars: {
       bg: '#0d1117',
       'bg-panel': '#010409',

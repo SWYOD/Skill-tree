@@ -29,7 +29,9 @@ export function installMockApi(): void {
         themeMode: 'primary',
         unlockMechanic: true,
         edgeAnim: 'breathing',
-        recentDirs: []
+        recentDirs: [],
+        fontMode: 'default',
+        customFont: null
       }),
     saveSettings: async (s: AppSettings) => set('mock:settings', s),
     getAppVersion: async () => '0.0.0-mock',

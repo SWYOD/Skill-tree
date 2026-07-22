@@ -50,7 +50,7 @@ body,
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-ui, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   background: var(--bg);
   color: var(--text);
   font-size: 13.5px;
@@ -779,6 +779,95 @@ textarea {
   border-radius: 10px;
   margin-top: 8px;
 }
+
+/* ── Модалка «Шрифт» (FontsPopup) — тот же паттерн, что и у тем ────────── */
+.fonts-modal {
+  width: 560px;
+}
+.fonts-mode-seg {
+  margin-bottom: 14px;
+}
+.font-preview-solo {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.font-preview-solo-label {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+.font-preview-solo-text {
+  font-size: 16px;
+  color: var(--text);
+}
+.font-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+.font-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: var(--surface);
+  padding: 10px 12px;
+  text-align: left;
+  overflow: hidden;
+}
+.font-card:hover {
+  border-color: var(--border-strong);
+}
+.font-card.active {
+  border-color: var(--accent);
+}
+.font-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.font-card-name {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.font-card-check {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+.font-card-preview {
+  font-size: 15px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.font-custom-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.font-custom-input {
+  flex: 1 1 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.font-custom-input:focus {
+  border-color: var(--accent);
+}
+
 /* ── Редактор темы ───────────────────────────────────────────────────── */
 .theme-editor-modal {
   max-width: min(880px, 94vw);

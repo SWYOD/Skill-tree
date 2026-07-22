@@ -26,10 +26,14 @@ export async function exportGraphPng(defaultName: string): Promise<boolean> {
   // Сериализованный SVG рендерится браузером как отдельный документ и не
   // наследует font-family из styles.css (body) — без явного шрифта на корне
   // <text> падает на дефолтный UA-шрифт (на Windows это засечковый), поэтому
-  // прописываем тот же стек шрифтов, что и в styles.css, прямо на клоне.
+  // прописываем шрифт явно. Берём ТЕКУЩЕЕ значение --font-ui (см.
+  // themes/apply.ts applyFont) — так экспорт всегда совпадает с тем, что
+  // реально на экране (включая выбранный пользователем шрифт), а не только
+  // с дефолтным стеком.
+  const liveFont = getComputedStyle(document.documentElement).getPropertyValue('--font-ui').trim()
   clone.setAttribute(
     'font-family',
-    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    liveFont || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
   )
 
   // Удаляем прозрачный hit-прямоугольник панорамы

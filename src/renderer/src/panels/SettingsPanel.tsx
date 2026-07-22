@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
-import { FolderOpen, Check, X, Palette, RefreshCw, Moon, Sun } from 'lucide-react'
+import { FolderOpen, Check, X, Palette, Type, RefreshCw, Moon, Sun } from 'lucide-react'
 import { useTree } from '../store/treeStore'
 import { Switch } from '../components/Switch'
 import { ThemesPopup } from './ThemesPopup'
+import { FontsPopup } from './FontsPopup'
 import { BUILTIN_THEMES } from '../themes/builtins'
 import type { UpdateStatus } from '@shared/types'
+
+const FONT_MODE_LABEL: Record<'default' | 'theme' | 'custom', string> = {
+  default: 'По умолчанию',
+  theme: 'Как в теме',
+  custom: 'Свой'
+}
 
 const EDGE_ANIMS: { value: 'static' | 'breathing' | 'flow'; label: string }[] = [
   { value: 'static', label: 'Статика' },
@@ -45,6 +52,7 @@ export function SettingsPanel(): JSX.Element {
   const setEdgeAnim = useTree((s) => s.setEdgeAnim)
   const setThemeMode = useTree((s) => s.setThemeMode)
   const [themesOpen, setThemesOpen] = useState(false)
+  const [fontsOpen, setFontsOpen] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
   useEffect(() => window.api.onUpdateStatus(setUpdateStatus), [])
@@ -102,6 +110,14 @@ export function SettingsPanel(): JSX.Element {
           </span>
         </button>
         {themesOpen && <ThemesPopup onClose={() => setThemesOpen(false)} />}
+
+        <button className="settings-row settings-row-btn" onClick={() => setFontsOpen(true)}>
+          <span>Шрифт</span>
+          <span className="settings-row-value">
+            <Type size={13} /> {FONT_MODE_LABEL[settings.fontMode]}
+          </span>
+        </button>
+        {fontsOpen && <FontsPopup onClose={() => setFontsOpen(false)} />}
 
         {activeTheme?.altVariant &&
           (() => {

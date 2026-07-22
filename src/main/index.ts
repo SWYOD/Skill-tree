@@ -13,7 +13,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   themeMode: 'primary',
   unlockMechanic: true,
   edgeAnim: 'breathing',
-  recentDirs: []
+  recentDirs: [],
+  fontMode: 'default',
+  customFont: null
 }
 
 function settingsPath(): string {

@@ -108,6 +108,10 @@ interface TreeState {
   removeCustomTheme: (id: string) => void
   setUnlockMechanic: (on: boolean) => void
   setEdgeAnim: (v: AppSettings['edgeAnim']) => void
+  setFontMode: (mode: AppSettings['fontMode']) => void
+  /** Выбор конкретного шрифта — переключает fontMode на 'custom' заодно,
+   *  отдельно дёргать setFontMode('custom') не нужно. */
+  setCustomFont: (family: string | null) => void
 
   replaceTree: (tree: SkillTree) => void
   appendItems: (items: Item[]) => void
@@ -154,7 +158,9 @@ export const useTree = create<TreeState>((set, get) => {
       themeMode: 'primary',
       unlockMechanic: true,
       edgeAnim: 'breathing',
-      recentDirs: []
+      recentDirs: [],
+      fontMode: 'default',
+      customFont: null
     },
     tree: null,
     selectedId: null,
@@ -588,6 +594,18 @@ export const useTree = create<TreeState>((set, get) => {
 
     setEdgeAnim(v) {
       const settings = { ...get().settings, edgeAnim: v }
+      set({ settings })
+      window.api.saveSettings(settings)
+    },
+
+    setFontMode(mode) {
+      const settings = { ...get().settings, fontMode: mode }
+      set({ settings })
+      window.api.saveSettings(settings)
+    },
+
+    setCustomFont(family) {
+      const settings = { ...get().settings, fontMode: 'custom' as const, customFont: family }
       set({ settings })
       window.api.saveSettings(settings)
     },

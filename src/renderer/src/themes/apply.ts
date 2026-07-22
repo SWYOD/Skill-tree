@@ -86,5 +86,36 @@ export function isValidThemeDef(v: unknown): v is ThemeDef {
   if (!isValidVariantShape({ vars: t.vars, branchColors: t.branchColors })) return false
   // altVariant опционален, но если задан — должен быть валидной парой vars+branchColors.
   if (t.altVariant !== undefined && !isValidVariantShape(t.altVariant)) return false
+  if (t.font !== undefined && typeof t.font !== 'string') return false
   return true
+}
+
+/** Fallback-хвост для UI-шрифта — тот же список, что раньше был жёстко
+ *  зашит в body{} (styles.css). Дописывается один раз здесь, а не в каждом
+ *  вызывающем месте, чтобы 'default'/'theme'/'custom' гарантированно вели
+ *  себя одинаково при отсутствии выбранного шрифта в системе. */
+export const FONT_FALLBACK_TAIL = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
+
+/** Итоговое значение --font-ui с учётом settings.fontMode:
+ *  'default' — стандартный стек (как было всегда);
+ *  'theme'   — шрифт активной темы, если он задан, иначе как 'default';
+ *  'custom'  — явно выбранный пользователем шрифт (из списка или свой). */
+export function resolveFontFamily(
+  fontMode: 'default' | 'theme' | 'custom',
+  customFont: string | null,
+  theme: ThemeDef
+): string {
+  if (fontMode === 'custom' && customFont && customFont.trim()) {
+    return `${customFont}, ${FONT_FALLBACK_TAIL}`
+  }
+  if (fontMode === 'theme' && theme.font) {
+    return `${theme.font}, ${FONT_FALLBACK_TAIL}`
+  }
+  return `'Inter', ${FONT_FALLBACK_TAIL}`
+}
+
+/** Применяет UI-шрифт как CSS custom property на :root — тот же приём, что
+ *  и applyThemeVars, чтобы шрифт можно было менять в рантайме без reload. */
+export function applyFont(family: string): void {
+  document.documentElement.style.setProperty('--font-ui', family)
 }
