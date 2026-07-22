@@ -1,5 +1,6 @@
 import { Check, Trash2 } from 'lucide-react'
 import type { ThemeDef } from '@shared/types'
+import { MiniSkillGraph } from './MiniSkillGraph'
 
 interface Props {
   theme: ThemeDef
@@ -8,21 +9,8 @@ interface Props {
   onRemove?: () => void
 }
 
-/** Углы «спиц» мини-графа в превью — фиксированный wireframe-каркас, но
- *  цвета в нём (фон/акцент/палитра веток) всегда берутся из theme, а не
- *  зашиты — так карточка честно показывает, как будет выглядеть КОНКРЕТНАЯ
- *  (в т.ч. импортированная пользователем) тема, а не один и тот же макет. */
-const SPOKES = [
-  { x: 23, y: -13 },
-  { x: 26, y: 5 },
-  { x: 9, y: 23 },
-  { x: -19, y: 15 },
-  { x: -22, y: -9 }
-]
-
 export function ThemeCard({ theme, active, onClick, onRemove }: Props): JSX.Element {
   const palette = theme.branchColors.length > 0 ? theme.branchColors : [theme.vars.accent]
-  const dotColors = SPOKES.map((_, i) => palette[i % palette.length])
 
   return (
     <button
@@ -39,13 +27,12 @@ export function ThemeCard({ theme, active, onClick, onRemove }: Props): JSX.Elem
         <line x1="7" y1="26" x2="15" y2="26" stroke={theme.vars['text-faint']} strokeWidth="1.5" strokeLinecap="round" />
         <line x1="7" y1="32" x2="18" y2="32" stroke={theme.vars['text-faint']} strokeWidth="1.5" strokeLinecap="round" />
         <g transform="translate(90,48)">
-          <circle r="13" fill="none" stroke={theme.vars['border-strong']} strokeWidth="1.5" />
-          {SPOKES.map((p, i) => (
-            <line key={i} x1="0" y1="0" x2={p.x} y2={p.y} stroke={dotColors[i]} strokeWidth="1" />
-          ))}
-          {SPOKES.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="3" fill={dotColors[i]} />
-          ))}
+          <MiniSkillGraph
+            radius={13}
+            colors={palette}
+            ringColor={theme.vars['border-strong']}
+            hubColor={theme.vars['text-faint']}
+          />
         </g>
       </svg>
       <div className="theme-card-footer">

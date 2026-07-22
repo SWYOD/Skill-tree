@@ -1,6 +1,6 @@
 {
   "name": "skill-tree",
-  "version": "0.1.0-beta.10",
+  "version": "0.1.0-beta.11",
   "description": "Персональный менеджер навыков в виде игрового дерева скиллов",
   "main": "./out/main/index.js",
   "author": "ilyatrubnikov",
@@ -20,7 +20,13 @@
     "appId": "com.ilyatrubnikov.skilltree",
     "productName": "Skill Tree",
     "icon": "build/icon.png",
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-${version}-autoupdate-${os}-${arch}.${ext}",
+    "publish": {
+      "provider": "github",
+      "owner": "SWYOD",
+      "repo": "Skill-tree",
+      "releaseType": "release"
+    },
     "directories": {
       "output": "release"
     },
@@ -66,10 +72,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-${version}-${os}-${arch}-Setup.${ext}"
+      "artifactName": "${productName}-${version}-autoupdate-${os}-${arch}-Setup.${ext}"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-${os}-${arch}-portable.${ext}"
+      "artifactName": "${productName}-${version}-autoupdate-${os}-${arch}-portable.${ext}"
     }
   },
   "dependencies": {
@@ -81,6 +87,7 @@
     "@lezer/markdown": "^1.7.2",
     "codemirror": "^6.0.2",
     "d3-hierarchy": "^3.1.2",
+    "electron-updater": "^6.8.9",
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.462.0",
     "nanoid": "^5.0.9",
@@ -97,6 +104,7 @@
     "electron-vite": "^2.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.35.3",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
   }

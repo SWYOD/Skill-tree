@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Minus, Maximize2, RotateCw, ChevronsDownUp, ChevronsUpDown, Check } from 'lucide-react'
 import { useTree } from '../store/treeStore'
 import { buildMaps, colorFor, collectDescendants, computeStatus, focusSet, ringCollapseIds } from '../domain'
-import { resolveTheme } from '../themes/apply'
+import { effectiveVariant, resolveTheme } from '../themes/apply'
 import { computeLayout, nodeScaleFor, INNER_RADIUS } from './layout'
 import type { Point } from './layout'
 import { NodeGlyph } from './NodeGlyph'
@@ -70,9 +70,10 @@ export function GraphCanvas(): JSX.Element {
   const edgeAnim = useTree((s) => s.settings.edgeAnim)
   const themeId = useTree((s) => s.settings.themeId)
   const customThemes = useTree((s) => s.settings.customThemes)
+  const themeMode = useTree((s) => s.settings.themeMode)
   const isDarkTheme = useMemo(
-    () => resolveTheme(themeId, customThemes).dark,
-    [themeId, customThemes]
+    () => effectiveVariant(resolveTheme(themeId, customThemes), themeMode).dark,
+    [themeId, customThemes, themeMode]
   )
 
   const wrapRef = useRef<HTMLDivElement>(null)

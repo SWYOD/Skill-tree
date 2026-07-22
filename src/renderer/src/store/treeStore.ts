@@ -100,6 +100,8 @@ interface TreeState {
   deleteChecklistEntry: (itemId: string, entryId: string) => void
 
   setThemeId: (id: string) => void
+  /** Быстрый тумблер тёмный/светлый вид ДЛЯ ТЕКУЩЕЙ темы (см. ThemeDef.altVariant). */
+  setThemeMode: (mode: 'primary' | 'alt') => void
   /** Импорт/создание — добавляет (или заменяет по id, для «обновить свою
    *  тему») кастомную тему и делает её активной. */
   addCustomTheme: (theme: ThemeDef) => void
@@ -149,6 +151,7 @@ export const useTree = create<TreeState>((set, get) => {
       rootDir: null,
       themeId: 'amoled',
       customThemes: [],
+      themeMode: 'primary',
       unlockMechanic: true,
       edgeAnim: 'breathing',
       recentDirs: []
@@ -533,7 +536,16 @@ export const useTree = create<TreeState>((set, get) => {
     },
 
     setThemeId(id) {
-      const settings = { ...get().settings, themeId: id }
+      // Тумблер тёмный/светлый сбрасываем на основной вид — alt относился к
+      // ПРЕЖНЕЙ теме и мог не иметь смысла (или вообще не существовать) у
+      // новой выбранной.
+      const settings = { ...get().settings, themeId: id, themeMode: 'primary' as const }
+      set({ settings })
+      window.api.saveSettings(settings)
+    },
+
+    setThemeMode(mode) {
+      const settings = { ...get().settings, themeMode: mode }
       set({ settings })
       window.api.saveSettings(settings)
     },
@@ -549,7 +561,11 @@ export const useTree = create<TreeState>((set, get) => {
       const settings = {
         ...get().settings,
         customThemes: [...withoutDup, incoming],
-        themeId: incoming.id
+        themeId: incoming.id,
+        // Как и в setThemeId — тумблер тёмный/светлый относился к ПРЕЖНЕЙ
+        // активной теме, для новой (даже только что созданной) начинаем
+        // с основного вида.
+        themeMode: 'primary' as const
       }
       set({ settings })
       window.api.saveSettings(settings)

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Checklist } from '../panels/Checklist'
 import { NoteEditor } from '../notes/NoteEditor'
 import { ThemeCard } from '../components/ThemeCard'
+import { BrandLogo } from '../components/BrandLogo'
 import { BUILTIN_THEMES } from '../themes/builtins'
 import { applyThemeVars, resolveTheme } from '../themes/apply'
 import { useTree } from '../store/treeStore'
@@ -95,7 +96,8 @@ export function Gallery(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    applyThemeVars(resolveTheme(themeId, customThemes).vars)
+    const theme = resolveTheme(themeId, customThemes)
+    applyThemeVars({ vars: theme.vars, dark: theme.dark })
   }, [themeId, customThemes])
 
   return (
@@ -115,6 +117,19 @@ export function Gallery(): JSX.Element {
       <Card title="NoteEditor — заметка">
         <div className="panel right-panel" style={{ padding: 12 }}>
           <NoteEditor item={demoNoteNode} />
+        </div>
+      </Card>
+
+      <Card title="BrandLogo — boxed (крупный, экран приветствия)">
+        <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+          <BrandLogo size={64} />
+          <BrandLogo size={96} />
+        </div>
+      </Card>
+
+      <Card title="BrandLogo — plain (компактный, шапка)">
+        <div className="toolbar" style={{ padding: '8px 12px', display: 'inline-flex' }}>
+          <BrandLogo size={26} variant="plain" />
         </div>
       </Card>
 

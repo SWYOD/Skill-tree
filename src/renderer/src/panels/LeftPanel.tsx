@@ -21,6 +21,7 @@ import { buildMaps, ancestorsOf, colorFor } from '../domain'
 import type { Item, ItemKind } from '@shared/types'
 import { SettingsPanel } from './SettingsPanel'
 import { BranchIcon } from '../components/BranchIcon'
+import { UpdateBadge } from '../components/UpdateBadge'
 
 type DropPos = 'before' | 'after' | 'inside'
 interface DropTarget {
@@ -290,6 +291,7 @@ export function LeftPanel(): JSX.Element {
       </div>
 
       <div className="settings-anchor">
+        <UpdateBadge />
         <button className="settings-toggle" onClick={() => setShowSettings((v) => !v)}>
           <Settings size={15} /> Настройки
         </button>

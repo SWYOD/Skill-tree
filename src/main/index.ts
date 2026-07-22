@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, dirname } from 'path'
 import { promises as fs } from 'fs'
 import type { AppSettings, SkillTree } from '../shared/types'
+import { registerAutoUpdater, scheduleUpdateChecks } from './autoUpdater'
 
 const isDev = !app.isPackaged
 
@@ -9,6 +10,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   rootDir: null,
   themeId: 'amoled',
   customThemes: [],
+  themeMode: 'primary',
   unlockMechanic: true,
   edgeAnim: 'breathing',
   recentDirs: []
@@ -77,6 +79,8 @@ function registerIpc(): void {
   ipcMain.handle('settings:save', async (_e, settings: AppSettings): Promise<void> => {
     await writeJson(settingsPath(), settings)
   })
+
+  ipcMain.handle('app:get-version', (): string => app.getVersion())
 
   ipcMain.handle('dir:select', async (): Promise<string | null> => {
     if (!mainWindow) return null
@@ -179,7 +183,9 @@ function registerIpc(): void {
 
 app.whenReady().then(() => {
   registerIpc()
+  registerAutoUpdater()
   createWindow()
+  scheduleUpdateChecks()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

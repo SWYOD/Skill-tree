@@ -6,6 +6,7 @@ import { exportGraphPng } from '../io/exportImage'
 import { treeStats } from '../domain'
 import { BrandLogo } from '../components/BrandLogo'
 import { BranchIcon } from '../components/BranchIcon'
+import { VersionBadge } from '../components/VersionBadge'
 
 interface ToolbarProps {
   leftOpen: boolean
@@ -65,8 +66,9 @@ export function Toolbar({
         >
           <PanelLeft size={17} />
         </button>
-        <BrandLogo size={18} className="brand-icon" />
+        <BrandLogo size={26} variant="plain" className="brand-icon" />
         <span className="brand">Skill Tree</span>
+        <VersionBadge />
         {tree &&
           (renaming ? (
             <input

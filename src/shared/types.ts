@@ -80,20 +80,39 @@ export interface ThemeVars {
   'accent-soft': string
   danger: string
   shadow: string
+  /** Цвет текста/иконок ПОВЕРХ заливки accent (кнопки primary, активный
+   *  segmented-таб, чекбокс в состоянии done и т.п.) — раньше эти места были
+   *  захардкожены в чёрный, из-за чего на светлых темах текст на акценте
+   *  выглядел неправильно. Опционален для обратной совместимости со старыми
+   *  экспортированными JSON-темами: если не задан, resolveAccentText() в
+   *  themes/apply.ts подставляет чёрный на тёмном accent-фоне и белый на
+   *  светлом (см. ThemeDef.dark соответствующего вида темы). */
+  'accent-text'?: string
+}
+
+/** Второй («альтернативный») вид той же темы — обратный по яркости режим
+ *  (тёмный↔светлый) той же темы, а не отдельная тема в галерее. Если задан,
+ *  в UI появляется быстрый тумблер тёмный/светлый прямо для этой темы. */
+export interface ThemeVariant {
+  vars: ThemeVars
+  branchColors: string[]
 }
 
 export interface ThemeDef {
   id: string
   name: string
-  /** Тёмная или светлая по своей сути — влияет на интенсивность neon-glow
-   *  фильтра на графе (сильный на тёмном фоне, приглушённый на светлом, иначе
-   *  на светлом фоне свечение выглядит грязным пятном, а не неоном). */
+  /** Тёмная или светлая по своей сути (основной вид, см. altVariant для
+   *  обратного) — влияет на интенсивность neon-glow фильтра на графе (сильный
+   *  на тёмном фоне, приглушённый на светлом, иначе на светлом фоне свечение
+   *  выглядит грязным пятном, а не неоном). */
   dark: boolean
   vars: ThemeVars
   /** Палитра для авто-назначения цвета новым веткам под этой темой. */
   branchColors: string[]
   /** true у отгруженных с приложением тем — их нельзя удалить/перезаписать. */
   builtin?: boolean
+  /** Обратный по яркости вид ЭТОЙ ЖЕ темы (см. ThemeVariant) — опционально. */
+  altVariant?: ThemeVariant
 }
 
 export interface AppSettings {
@@ -103,6 +122,9 @@ export interface AppSettings {
   themeId: string
   /** Импортированные/созданные пользователем темы (хранятся в settings.json). */
   customThemes: ThemeDef[]
+  /** Какой вид активной темы показывать — основной или altVariant (если у
+   *  темы вообще есть обратный по яркости вид, см. ThemeDef.altVariant). */
+  themeMode: 'primary' | 'alt'
   /** Механика игрового разблока (узлы блокируются до выполнения родителя). */
   unlockMechanic: boolean
   /** Как анимируется подсвеченный путь: статика / «дыхание» / поток. */
@@ -111,12 +133,26 @@ export interface AppSettings {
   recentDirs: string[]
 }
 
+/** Статус проверки/загрузки автообновления — транслируется из главного
+ *  процесса в рендерер по мере продвижения electron-updater. */
+export interface UpdateStatus {
+  state: 'checking' | 'available' | 'not-available' | 'downloaded' | 'error'
+  version?: string
+  message?: string
+}
+
+export interface UpdateReadyInfo {
+  version: string
+}
+
 // ── Контракт IPC (window.api) ────────────────────────────────────────────────
 
 export interface Api {
   // Настройки приложения (userData)
   getSettings(): Promise<AppSettings>
   saveSettings(settings: AppSettings): Promise<void>
+  /** Версия приложения из package.json (для бейджа в шапке). */
+  getAppVersion(): Promise<string>
 
   // Корневая директория дерева
   selectRootDir(): Promise<string | null>
@@ -134,4 +170,11 @@ export interface Api {
   exportJson(defaultName: string, data: unknown): Promise<boolean>
   importJson(): Promise<unknown | null>
   savePng(defaultName: string, dataUrl: string): Promise<boolean>
+
+  // Автообновление (electron-updater, см. src/main/autoUpdater.ts)
+  checkForUpdate(): Promise<void>
+  installUpdate(): Promise<void>
+  /** Возвращает функцию отписки. */
+  onUpdateStatus(cb: (status: UpdateStatus) => void): () => void
+  onUpdateReady(cb: (info: UpdateReadyInfo) => void): () => void
 }

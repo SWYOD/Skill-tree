@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { X, Upload, Download, Wand2 } from 'lucide-react'
 import { useTree } from '../store/treeStore'
 import { ThemeCard } from '../components/ThemeCard'
+import { ThemeEditor } from './ThemeEditor'
 import { BUILTIN_THEMES } from '../themes/builtins'
-import { isValidThemeDef } from '../themes/apply'
+import { isValidThemeDef, resolveTheme } from '../themes/apply'
 
 interface Props {
   onClose: () => void
@@ -20,6 +21,7 @@ export function ThemesPopup({ onClose }: Props): JSX.Element {
   const addCustomTheme = useTree((s) => s.addCustomTheme)
   const removeCustomTheme = useTree((s) => s.removeCustomTheme)
   const [importError, setImportError] = useState<string | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -60,11 +62,10 @@ export function ThemesPopup({ onClose }: Props): JSX.Element {
             </button>
             <button
               className="tb-btn theme-editor-btn"
-              title="Редактор тем — в разработке"
-              onClick={() => setImportError('Редактор тем ещё в разработке.')}
+              title="Создать тему на основе активной"
+              onClick={() => setEditorOpen(true)}
             >
               <Wand2 size={14} /> Редактор темы
-              <span className="beta-badge">бета</span>
             </button>
             <button className="icon-btn" onClick={onClose} title="Закрыть">
               <X size={16} />
@@ -102,6 +103,13 @@ export function ThemesPopup({ onClose }: Props): JSX.Element {
           </div>
         )}
       </div>
+
+      {editorOpen && (
+        <ThemeEditor
+          baseTheme={resolveTheme(settings.themeId, settings.customThemes)}
+          onClose={() => setEditorOpen(false)}
+        />
+      )}
     </div>
   )
 }

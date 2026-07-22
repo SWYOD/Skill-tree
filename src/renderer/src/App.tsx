@@ -9,7 +9,7 @@ import { GraphErrorBoundary } from './graph/GraphErrorBoundary'
 import { BrandLogo } from './components/BrandLogo'
 import { StatsBar } from './panels/StatsBar'
 import { BranchProgressChart } from './panels/BranchProgressChart'
-import { applyThemeVars, resolveTheme } from './themes/apply'
+import { applyThemeVars, effectiveVariant, resolveTheme } from './themes/apply'
 
 export default function App(): JSX.Element {
   const ready = useTree((s) => s.ready)
@@ -22,8 +22,9 @@ export default function App(): JSX.Element {
   }, [init])
 
   useEffect(() => {
-    applyThemeVars(resolveTheme(settings.themeId, settings.customThemes).vars)
-  }, [settings.themeId, settings.customThemes])
+    const theme = resolveTheme(settings.themeId, settings.customThemes)
+    applyThemeVars(effectiveVariant(theme, settings.themeMode))
+  }, [settings.themeId, settings.customThemes, settings.themeMode])
 
   if (!ready) return <div className="center-screen">Загрузка…</div>
   if (!settings.rootDir) return <Welcome stage="dir" />

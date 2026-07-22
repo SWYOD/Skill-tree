@@ -1,7 +1,10 @@
-import type { ThemeDef, ThemeVars } from '@shared/types'
+import type { ThemeDef, ThemeVars, ThemeVariant } from '@shared/types'
 import { BUILTIN_THEMES, DEFAULT_THEME_ID } from './builtins'
 
-const THEME_VAR_KEYS: (keyof ThemeVars)[] = [
+// accent-text намеренно не входит сюда — это единственное опциональное поле
+// ThemeVars (обратная совместимость со старыми JSON-темами), у него свой
+// путь применения через resolveAccentText с фолбэком (см. applyThemeVars).
+const THEME_VAR_KEYS: Exclude<keyof ThemeVars, 'accent-text'>[] = [
   'bg',
   'bg-panel',
   'bg-graph',
@@ -32,12 +35,46 @@ export function resolveTheme(themeId: string, customThemes: ThemeDef[]): ThemeDe
   return BUILTIN_THEMES.find((t) => t.id === DEFAULT_THEME_ID) ?? BUILTIN_THEMES[0]
 }
 
+/**
+ * Действующий вид темы с учётом тумблера тёмный/светлый (themeMode): если
+ * запрошен 'alt', но у темы нет altVariant (обычные темы без пары) — просто
+ * остаёмся на основном виде, тумблер в UI для таких тем и не показывается.
+ */
+export function effectiveVariant(
+  theme: ThemeDef,
+  mode: 'primary' | 'alt'
+): ThemeVariant & { dark: boolean } {
+  if (mode === 'alt' && theme.altVariant) {
+    return { ...theme.altVariant, dark: !theme.dark }
+  }
+  return { vars: theme.vars, branchColors: theme.branchColors, dark: theme.dark }
+}
+
+/** Цвет текста поверх заливки accent — с фолбэком для тем/JSON-файлов, где
+ *  accent-text ещё не задан (см. комментарий у ThemeVars['accent-text']). */
+export function resolveAccentText(vars: ThemeVars, dark: boolean): string {
+  return vars['accent-text'] ?? (dark ? '#0a0410' : '#ffffff')
+}
+
 /** Применяет тему как inline CSS custom properties на :root — так тема может
  *  быть произвольным JSON-объектом (импортированным/созданным пользователем),
  *  а не одним из захардкоженных в styles.css блоков. */
-export function applyThemeVars(vars: ThemeVars): void {
+export function applyThemeVars(variant: { vars: ThemeVars; dark: boolean }): void {
   const root = document.documentElement.style
-  for (const key of THEME_VAR_KEYS) root.setProperty(`--${key}`, vars[key])
+  for (const key of THEME_VAR_KEYS) root.setProperty(`--${key}`, variant.vars[key])
+  root.setProperty('--accent-text', resolveAccentText(variant.vars, variant.dark))
+}
+
+function isValidVariantShape(v: unknown): v is ThemeVariant {
+  if (!v || typeof v !== 'object') return false
+  const t = v as Record<string, unknown>
+  if (!t.vars || typeof t.vars !== 'object') return false
+  const vars = t.vars as Record<string, unknown>
+  if (!THEME_VAR_KEYS.every((k) => typeof vars[k] === 'string')) return false
+  // accent-text опционален (обратная совместимость), но если задан — строка.
+  if (vars['accent-text'] !== undefined && typeof vars['accent-text'] !== 'string') return false
+  if (!Array.isArray(t.branchColors) || !t.branchColors.every((c) => typeof c === 'string')) return false
+  return true
 }
 
 /** Грубая, но достаточная проверка формы импортированного JSON — защищает
@@ -46,9 +83,8 @@ export function isValidThemeDef(v: unknown): v is ThemeDef {
   if (!v || typeof v !== 'object') return false
   const t = v as Record<string, unknown>
   if (typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.dark !== 'boolean') return false
-  if (!t.vars || typeof t.vars !== 'object') return false
-  const vars = t.vars as Record<string, unknown>
-  if (!THEME_VAR_KEYS.every((k) => typeof vars[k] === 'string')) return false
-  if (!Array.isArray(t.branchColors) || !t.branchColors.every((c) => typeof c === 'string')) return false
+  if (!isValidVariantShape({ vars: t.vars, branchColors: t.branchColors })) return false
+  // altVariant опционален, но если задан — должен быть валидной парой vars+branchColors.
+  if (t.altVariant !== undefined && !isValidVariantShape(t.altVariant)) return false
   return true
 }

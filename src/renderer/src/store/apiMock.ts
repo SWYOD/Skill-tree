@@ -26,11 +26,13 @@ export function installMockApi(): void {
         rootDir: null,
         themeId: 'amoled',
         customThemes: [],
+        themeMode: 'primary',
         unlockMechanic: true,
         edgeAnim: 'breathing',
         recentDirs: []
       }),
     saveSettings: async (s: AppSettings) => set('mock:settings', s),
+    getAppVersion: async () => '0.0.0-mock',
     selectRootDir: async () => '/mock/skill-tree',
     loadStore: async (root: string) => get<SkillTree | null>(`mock:store:${root}`, null),
     saveStore: async (root: string, tree: SkillTree) => set(`mock:store:${root}`, tree),
@@ -54,7 +56,12 @@ export function installMockApi(): void {
     savePng: async () => {
       console.info('[mock] savePng')
       return true
-    }
+    },
+    // Автообновление недоступно в браузере — заглушки-нооп, чтобы UI не падал.
+    checkForUpdate: async () => console.info('[mock] checkForUpdate'),
+    installUpdate: async () => console.info('[mock] installUpdate'),
+    onUpdateStatus: () => () => {},
+    onUpdateReady: () => () => {}
   }
 
   w.api = mock
