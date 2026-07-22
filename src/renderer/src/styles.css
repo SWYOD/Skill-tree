@@ -483,7 +483,7 @@ textarea {
   gap: 10px;
   width: calc(100% - 16px);
   padding: 9px 12px;
-  margin: 8px 8px 0;
+  margin: 8px 8px 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
@@ -520,6 +520,11 @@ textarea {
 .update-badge-arrow {
   flex: 0 0 auto;
   color: var(--text-faint);
+}
+.update-badge-error {
+  margin: 4px 8px 0;
+  color: var(--danger);
+  line-height: 1.4;
 }
 .settings-toggle {
   display: flex;
@@ -1702,13 +1707,70 @@ textarea {
 .md-preview p {
   margin: 6px 0;
 }
+/* Нативные маркеры <ul>/<ol> (list-style-position: outside, дефолт браузера)
+   рендерятся в зоне ДО padding-box контента непредсказуемо — визуально могут
+   вылезать за то, что devtools подсвечивает как границу элемента (алгоритм
+   позиционирования "outside" не гарантирует, что маркер поместится в
+   зарезервированный padding-left). Вместо этого — свои ::before с абсолютным
+   позиционированием, тем же приёмом, что и у чек-боксов ниже: маркер садится
+   в тот же «жёлоб» шириной 20px, гарантированно предсказуемо в любом браузере. */
 .md-preview ul,
 .md-preview ol {
   margin: 6px 0;
   padding-left: 20px;
 }
+.md-preview ol {
+  counter-reset: md-ol;
+}
 .md-preview li {
+  position: relative;
   margin: 2px 0;
+  list-style: none;
+}
+.md-preview ul > li:not(.md-task-item)::before {
+  content: '•';
+  position: absolute;
+  left: -16px;
+  color: var(--text-dim);
+}
+.md-preview ol > li {
+  counter-increment: md-ol;
+}
+.md-preview ol > li::before {
+  content: counter(md-ol) '.';
+  position: absolute;
+  left: -20px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.md-preview li > ul,
+.md-preview li > ol {
+  margin: 2px 0 0;
+}
+.md-preview del {
+  color: var(--text-faint);
+}
+.md-preview mark {
+  background: color-mix(in srgb, #ffd60a 35%, transparent);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+/* Чек-бокс — в тот же «жёлоб» под маркер, что и у обычных <li> (position/
+   list-style уже сброшены общим правилом .md-preview li выше) — тот же
+   абсолютно спозиционированный приём, что и у ::before-маркеров буллетов/
+   номеров, чтобы все три типа маркеров вели себя идентично предсказуемо. */
+.md-task-item input[type='checkbox'] {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  accent-color: var(--accent);
+}
+.md-task-done {
+  color: var(--text-faint);
+}
+.md-task-done > span {
+  text-decoration: line-through;
 }
 .md-preview hr {
   margin: 14px 0;
@@ -1894,6 +1956,48 @@ textarea {
 .cm-link {
   color: var(--accent);
   text-decoration: underline;
+}
+.cm-strike {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+.cm-highlight {
+  background: color-mix(in srgb, #ffd60a 35%, transparent);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.cm-list-line {
+  position: relative;
+}
+/* Одинаковая ширина «колонки» под маркер у буллета и у номера — иначе текст
+   после «•» и после «1.» стартует на разных X (буллет — однa буква и без
+   этого правила выходит уже, чем номер) и получается «лесенка» относительно
+   друг друга и относительно обычного текста абзацев. */
+.cm-bullet,
+.cm-ol-marker {
+  display: inline-block;
+  width: 1.6em;
+  color: var(--text-dim);
+  user-select: none;
+}
+.cm-ol-marker {
+  font-variant-numeric: tabular-nums;
+}
+.cm-task-checkbox {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -2px;
+  margin-right: 3px;
+}
+.cm-task-checkbox input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.cm-task-done {
+  color: var(--text-faint);
+  text-decoration: line-through;
 }
 .cm-quote-line {
   padding-left: 10px;

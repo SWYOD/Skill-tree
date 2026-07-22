@@ -56,7 +56,16 @@ export function registerAutoUpdater(): void {
   })
 
   ipcMain.handle('updater:install', (): void => {
-    autoUpdater.quitAndInstall()
+    // На macOS без валидной подписи (Developer ID Application) Squirrel.Mac
+    // молча отказывается подменять .app — quitAndInstall() тогда либо ничего
+    // не делает, либо бросает синхронно. Пробрасываем ошибку в рендерер (см.
+    // UpdateBadge.tsx), а не глотаем её, иначе клик выглядит так, будто кнопка
+    // вообще не работает.
+    try {
+      autoUpdater.quitAndInstall()
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : String(err))
+    }
   })
 }
 

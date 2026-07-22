@@ -12,16 +12,27 @@ import type { LucideIcon } from 'lucide-react'
 
 /**
  * Лёгкий самописный markdown-рендер (без внешней библиотеки — заметки личные,
- * не нужен полный CommonMark). Поддерживает: заголовки, жирный/курсив текст,
- * инлайн-код, ссылки вида [текст](url), списки (- / 1.), код-блоки в оградах
- * из обратных кавычек, разделитель ---, и Obsidian-callout'ы — цитата, первая
+ * не нужен полный CommonMark). Поддерживает: заголовки, жирный/курсив/
+ * зачёркнутый/выделенный текст, инлайн-код, ссылки вида [текст](url), вложенные
+ * списки (- / 1.) с чек-боксами задач (- [ ] / - [x]), код-блоки в оградах из
+ * обратных кавычек, разделитель ---, и Obsidian-callout'ы — цитата, первая
  * строка которой имеет вид [!note] Заголовок, тело — следующие строки цитаты.
  */
 
+interface ListItem {
+  text: string
+  task: 'none' | 'unchecked' | 'checked'
+  children: ListBlock[]
+}
+interface ListBlock {
+  type: 'list'
+  ordered: boolean
+  items: ListItem[]
+}
+
 type Block =
   | { type: 'heading'; level: number; text: string }
-  | { type: 'ul'; items: string[] }
-  | { type: 'ol'; items: string[] }
+  | ListBlock
   | { type: 'code'; text: string }
   | { type: 'callout'; kind: string; title: string; lines: string[] }
   | { type: 'quote'; lines: string[] }
@@ -54,17 +65,47 @@ function isHeading(line: string): boolean {
 function isQuote(line: string): boolean {
   return /^>\s?/.test(line)
 }
-function isUl(line: string): boolean {
-  return /^[-*]\s+/.test(line)
-}
-function isOl(line: string): boolean {
-  return /^\d+\.\s+/.test(line)
-}
 function isFence(line: string): boolean {
   return line.trim().startsWith('```')
 }
 function isHr(line: string): boolean {
   return /^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())
+}
+
+/** Строка-пункт списка (маркированного или нумерованного), с учётом отступа
+ *  вложенности — табы считаются как 2 пробела, тот же счёт, что и в
+ *  LiveMarkdownEditor.tsx, чтобы вложенность в редакторе и превью совпадала. */
+function listLineInfo(line: string): { indent: number; ordered: boolean; text: string } | null {
+  const m = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line)
+  if (!m) return null
+  return { indent: m[1].replace(/\t/g, '  ').length, ordered: /^\d/.test(m[2]), text: m[3] }
+}
+
+function parseList(lines: string[], start: number, levelIndent: number): { block: ListBlock; next: number } {
+  const first = listLineInfo(lines[start])!
+  const ordered = first.ordered
+  const items: ListItem[] = []
+  let i = start
+  while (i < lines.length) {
+    const info = listLineInfo(lines[i])
+    if (!info || info.indent < levelIndent) break
+    if (info.indent > levelIndent) {
+      if (items.length === 0) break
+      const { block, next } = parseList(lines, i, info.indent)
+      items[items.length - 1].children.push(block)
+      i = next
+      continue
+    }
+    if (info.ordered !== ordered) break
+    const taskMatch = /^\[([ xX])\]\s+(.*)$/.exec(info.text)
+    items.push({
+      text: taskMatch ? taskMatch[2] : info.text,
+      task: taskMatch ? (taskMatch[1].toLowerCase() === 'x' ? 'checked' : 'unchecked') : 'none',
+      children: []
+    })
+    i++
+  }
+  return { block: { type: 'list', ordered, items }, next: i }
 }
 
 function parseBlocks(src: string): Block[] {
@@ -119,22 +160,11 @@ function parseBlocks(src: string): Block[] {
       }
       continue
     }
-    if (isUl(line)) {
-      const items: string[] = []
-      while (i < lines.length && isUl(lines[i])) {
-        items.push(lines[i].replace(/^[-*]\s+/, ''))
-        i++
-      }
-      blocks.push({ type: 'ul', items })
-      continue
-    }
-    if (isOl(line)) {
-      const items: string[] = []
-      while (i < lines.length && isOl(lines[i])) {
-        items.push(lines[i].replace(/^\d+\.\s+/, ''))
-        i++
-      }
-      blocks.push({ type: 'ol', items })
+    const info = listLineInfo(line)
+    if (info) {
+      const { block, next } = parseList(lines, i, info.indent)
+      blocks.push(block)
+      i = next
       continue
     }
     const pLines: string[] = []
@@ -143,8 +173,7 @@ function parseBlocks(src: string): Block[] {
       lines[i].trim() !== '' &&
       !isHeading(lines[i]) &&
       !isQuote(lines[i]) &&
-      !isUl(lines[i]) &&
-      !isOl(lines[i]) &&
+      !listLineInfo(lines[i]) &&
       !isFence(lines[i]) &&
       !isHr(lines[i])
     ) {
@@ -156,9 +185,11 @@ function parseBlocks(src: string): Block[] {
   return blocks
 }
 
-/** Инлайн-форматирование внутри строки: жирный, курсив, код, [текст](url). */
+/** Инлайн-форматирование внутри строки: жирный, курсив, зачёркнутый,
+ *  выделенный, код, [текст](url). */
 function renderInline(text: string): JSX.Element {
-  const re = /(\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*|_([^_]+)_)/g
+  const re =
+    /(\*\*([^*]+)\*\*|~~([^~]+)~~|==([^=]+)==|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*|_([^_]+)_)/g
   const parts: (string | JSX.Element)[] = []
   let lastIndex = 0
   let m: RegExpExecArray | null
@@ -166,19 +197,36 @@ function renderInline(text: string): JSX.Element {
   while ((m = re.exec(text))) {
     if (m.index > lastIndex) parts.push(text.slice(lastIndex, m.index))
     if (m[2] !== undefined) parts.push(<strong key={key++}>{m[2]}</strong>)
-    else if (m[3] !== undefined) parts.push(<code key={key++}>{m[3]}</code>)
-    else if (m[4] !== undefined)
+    else if (m[3] !== undefined) parts.push(<del key={key++}>{m[3]}</del>)
+    else if (m[4] !== undefined) parts.push(<mark key={key++}>{m[4]}</mark>)
+    else if (m[5] !== undefined) parts.push(<code key={key++}>{m[5]}</code>)
+    else if (m[6] !== undefined)
       parts.push(
-        <a key={key++} href={m[5]} target="_blank" rel="noreferrer">
-          {m[4]}
+        <a key={key++} href={m[7]} target="_blank" rel="noreferrer">
+          {m[6]}
         </a>
       )
-    else if (m[6] !== undefined) parts.push(<em key={key++}>{m[6]}</em>)
-    else if (m[7] !== undefined) parts.push(<em key={key++}>{m[7]}</em>)
+    else if (m[8] !== undefined) parts.push(<em key={key++}>{m[8]}</em>)
+    else if (m[9] !== undefined) parts.push(<em key={key++}>{m[9]}</em>)
     lastIndex = re.lastIndex
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex))
   return <>{parts}</>
+}
+
+function renderList(block: ListBlock, key: number | string): JSX.Element {
+  const Tag = block.ordered ? 'ol' : 'ul'
+  return (
+    <Tag key={key}>
+      {block.items.map((it, j) => (
+        <li key={j} className={it.task !== 'none' ? `md-task-item${it.task === 'checked' ? ' md-task-done' : ''}` : undefined}>
+          {it.task !== 'none' && <input type="checkbox" checked={it.task === 'checked'} disabled readOnly />}
+          <span>{renderInline(it.text)}</span>
+          {it.children.map((child, k) => renderList(child, `${key}-${k}`))}
+        </li>
+      ))}
+    </Tag>
+  )
 }
 
 export function renderMarkdown(src: string): JSX.Element {
@@ -197,22 +245,8 @@ export function renderMarkdown(src: string): JSX.Element {
           }
           case 'hr':
             return <hr key={i} />
-          case 'ul':
-            return (
-              <ul key={i}>
-                {b.items.map((it, j) => (
-                  <li key={j}>{renderInline(it)}</li>
-                ))}
-              </ul>
-            )
-          case 'ol':
-            return (
-              <ol key={i}>
-                {b.items.map((it, j) => (
-                  <li key={j}>{renderInline(it)}</li>
-                ))}
-              </ol>
-            )
+          case 'list':
+            return renderList(b, i)
           case 'code':
             return (
               <pre key={i}>
