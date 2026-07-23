@@ -850,22 +850,97 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.font-custom-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
+/* ── Комбобокс шрифта (ввод + автоподсказка + полный список по клику) ──── */
+.font-combobox {
+  position: relative;
 }
-.font-custom-input {
-  flex: 1 1 auto;
+.font-combobox-input {
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 7px 10px;
+  /* Запас справа под каретку — без него длинный текст мог бы залезать под
+     иконку вместо того, чтобы обрезаться многоточием до неё. */
+  padding: 7px 30px 7px 10px;
   font-size: 13px;
   color: var(--text);
 }
-.font-custom-input:focus {
+.font-combobox-input:focus {
   border-color: var(--accent);
+}
+.font-combobox-caret {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.font-combobox-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+.font-combobox-option {
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.font-combobox-option.active {
+  background: var(--hover);
+}
+
+/* ── Экспорт графа в PNG ─────────────────────────────────────────────── */
+.export-png-theme-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.export-png-theme-mode {
+  flex: 0 0 auto;
+}
+.export-png-theme-grid {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.export-png-preview {
+  flex: 1 1 auto;
+  min-height: 320px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+  display: flex;
+}
+.export-png-preview.checkerboard {
+  background-image:
+    linear-gradient(45deg, #808080 25%, transparent 25%),
+    linear-gradient(-45deg, #808080 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #808080 75%),
+    linear-gradient(-45deg, transparent 75%, #808080 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-color: #b0b0b0;
+}
+#static-graph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* ── Редактор темы ───────────────────────────────────────────────────── */
@@ -1410,6 +1485,30 @@ textarea {
   background: var(--node-color);
   border-color: var(--node-color);
   color: var(--surface-2);
+}
+.node-popup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.node-popup-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+.node-popup-action:hover {
+  color: var(--text);
+}
+.node-popup-action.danger:hover {
+  color: var(--danger);
 }
 .graph-controls {
   position: absolute;

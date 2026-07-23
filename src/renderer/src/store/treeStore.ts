@@ -4,6 +4,7 @@ import type { AppSettings, ChecklistEntry, Item, ItemKind, SkillTree, ThemeDef }
 import { BRANCH_COLORS } from '../theme'
 import { buildMaps, defaultGraphCollapsed } from '../domain'
 import { BUILTIN_THEMES, DEFAULT_THEME_ID } from '../themes/builtins'
+import { guessFontCategory } from '../themes/fonts'
 
 const now = (): number => Date.now()
 
@@ -160,7 +161,8 @@ export const useTree = create<TreeState>((set, get) => {
       edgeAnim: 'breathing',
       recentDirs: [],
       fontMode: 'default',
-      customFont: null
+      customFont: null,
+      lastCustomFontByCategory: {}
     },
     tree: null,
     selectedId: null,
@@ -605,7 +607,16 @@ export const useTree = create<TreeState>((set, get) => {
     },
 
     setCustomFont(family) {
-      const settings = { ...get().settings, fontMode: 'custom' as const, customFont: family }
+      const trimmed = family?.trim()
+      const lastCustomFontByCategory = trimmed
+        ? { ...get().settings.lastCustomFontByCategory, [guessFontCategory(trimmed)]: family }
+        : get().settings.lastCustomFontByCategory
+      const settings = {
+        ...get().settings,
+        fontMode: 'custom' as const,
+        customFont: family,
+        lastCustomFontByCategory
+      }
       set({ settings })
       window.api.saveSettings(settings)
     },

@@ -41,3 +41,18 @@ export const FONT_CATEGORY_LABEL: Record<FontOption['category'], string> = {
   serif: 'С засечками',
   mono: 'Моноширинные'
 }
+
+/** Грубая эвристика по названию — для шрифтов, введённых вручную (их нет в
+ *  FONT_OPTIONS, реальных метаданных о начертании у нас нет). Смотрим на
+ *  типичные слова в имени самого шрифта (JetBrains Mono, Fira Code, Times
+ *  New Roman и т.п.) — этого достаточно, чтобы решить, в какую категорию
+ *  «приколоть» его как последний использованный (см. lastCustomFontByCategory
+ *  в AppSettings и FontsPopup). Если ничего не подошло — считаем sans, это
+ *  самая частая категория шрифтов по умолчанию. */
+export function guessFontCategory(name: string): FontOption['category'] {
+  const n = name.toLowerCase()
+  if (/mono|code|console|terminal|courier/.test(n)) return 'mono'
+  if (/serif/.test(n) && !/sans[\s-]?serif/.test(n)) return 'serif'
+  if (/times|georgia|garamond|palatino|book\s?antiqua|cambria/.test(n)) return 'serif'
+  return 'sans'
+}

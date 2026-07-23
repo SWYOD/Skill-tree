@@ -49,6 +49,10 @@ interface Props {
    *  в GraphCanvas.tsx). Закрывается кликом мимо или началом панорамирования
    *  графа — это отслеживается централизованно в GraphCanvas, не здесь. */
   onHoldStart: (id: string) => void
+  /** Рендер сразу в конечном состоянии, без spring-анимации появления — для
+   *  статичного превью/экспорта графа (StaticGraphSvg), где нет смысла ждать
+   *  анимацию и важно, чтобы захваченный кадр не попал на середину spring'а. */
+  instant?: boolean
 }
 
 /**
@@ -74,7 +78,8 @@ export const NodeGlyph = memo(function NodeGlyph({
   onHover,
   onReveal,
   onToggleCollapse,
-  onHoldStart
+  onHoldStart,
+  instant = false
 }: Props): JSX.Element {
   // После первого монтирования переключаем transition на «мгновенный» — иначе
   // задержка появления попадала бы и на анимацию hover/emphasis (scale), делая
@@ -180,9 +185,9 @@ export const NodeGlyph = memo(function NodeGlyph({
       }}
     >
       <motion.g
-        initial={{ scale: 0, opacity: 0 }}
+        initial={instant ? false : { scale: 0, opacity: 0 }}
         animate={{ scale: hoverScale, opacity: 1 }}
-        transition={springTransition}
+        transition={instant ? { duration: 0 } : springTransition}
       >
         {/* Невидимая зона захвата курсора (чтобы hover ловился и в зазорах).
             Запас на клик не сжимаем так же агрессивно, как визуальный размер —

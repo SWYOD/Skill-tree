@@ -71,6 +71,20 @@ function regenIds(items: Item[]): Item[] {
   }))
 }
 
+/**
+ * Импорт файла ЛЮБОГО kind как ветки — не заменяет текущее дерево, а
+ * добавляет содержимое файла поверх него с перегенерацией id, независимо
+ * от того, что записано в kind самого файла (tree или branch). Отдельная
+ * кнопка в тулбаре — чтобы пользователь не мог случайно импортировать файл
+ * дерева как замену всего текущего дерева, когда на самом деле хотел
+ * добавить ветку.
+ */
+export async function importBranchFromFile(): Promise<Item[] | null> {
+  const raw = await window.api.importJson()
+  if (!isBundle(raw)) return null
+  return regenIds(raw.items)
+}
+
 export type ImportResult =
   | { kind: 'tree'; tree: SkillTree }
   | { kind: 'branch'; items: Item[] }

@@ -15,7 +15,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   edgeAnim: 'breathing',
   recentDirs: [],
   fontMode: 'default',
-  customFont: null
+  customFont: null,
+  lastCustomFontByCategory: {}
 }
 
 function settingsPath(): string {

@@ -15,6 +15,8 @@ interface Props {
   anim: EdgeAnim
   /** Задержка (сек) появления при монтировании — см. NodeGlyph.revealDelay. */
   revealDelay?: number
+  /** См. NodeGlyph.instant — рендер сразу в конечном состоянии, без fade-in. */
+  instant?: boolean
 }
 
 /** Мемоизирован по той же причине, что и NodeGlyph — см. комментарий там. */
@@ -24,7 +26,8 @@ export const EdgeLine = memo(function EdgeLine({
   lit,
   dimmed,
   anim,
-  revealDelay = 0
+  revealDelay = 0,
+  instant = false
 }: Props): JSX.Element {
   const charged = targetStatus === 'done' || targetStatus === 'in_progress'
   const bright = lit || charged
@@ -48,9 +51,9 @@ export const EdgeLine = memo(function EdgeLine({
 
   return (
     <motion.g
-      initial={{ opacity: 0 }}
+      initial={instant ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3, delay: revealDelay }}
+      transition={instant ? { duration: 0 } : { duration: 0.3, delay: revealDelay }}
     >
       {/* Базовая линия */}
       <line {...commonProps} strokeWidth={1.5} opacity={baseOpacity} />

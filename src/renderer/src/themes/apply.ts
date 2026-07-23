@@ -65,6 +65,23 @@ export function applyThemeVars(variant: { vars: ThemeVars; dark: boolean }): voi
   root.setProperty('--accent-text', resolveAccentText(variant.vars, variant.dark))
 }
 
+/** То же самое, что и applyThemeVars, но возвращает набор CSS custom
+ *  properties как обычный объект вместо мутации :root — нужно для рендера
+ *  ГРАФА в НЕЗАВИСИМОЙ от текущих настроек приложения теме (превью и экспорт
+ *  PNG в ExportPngDialog: пользователь может выбрать тему/шрифт, отличные от
+ *  тех, что сейчас реально применены в интерфейсе), задавая их как inline
+ *  style на локальном wrapper-элементе, а не на всём документе. */
+export function themeVarsStyle(
+  variant: { vars: ThemeVars; dark: boolean },
+  fontFamily: string
+): Record<string, string> {
+  const style: Record<string, string> = {}
+  for (const key of THEME_VAR_KEYS) style[`--${key}`] = variant.vars[key]
+  style['--accent-text'] = resolveAccentText(variant.vars, variant.dark)
+  style['--font-ui'] = fontFamily
+  return style
+}
+
 function isValidVariantShape(v: unknown): v is ThemeVariant {
   if (!v || typeof v !== 'object') return false
   const t = v as Record<string, unknown>

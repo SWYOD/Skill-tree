@@ -146,6 +146,11 @@ export interface AppSettings {
    *  (тот же fallback, что и у fontMode 'default'), ничего дополнительно
    *  проверять/подставлять не нужно. */
   customFont: string | null
+  /** Последний применённый шрифт (family) для fontMode 'custom' — отдельно
+   *  по категориям (sans/serif/mono, см. themes/fonts.ts) — используется,
+   *  чтобы в FontsPopup показывать его первой карточкой в своей категории
+   *  (см. guessFontCategory). Не обязателен у всех категорий. */
+  lastCustomFontByCategory: Partial<Record<'sans' | 'serif' | 'mono', string>>
 }
 
 /** Статус проверки/загрузки автообновления — транслируется из главного

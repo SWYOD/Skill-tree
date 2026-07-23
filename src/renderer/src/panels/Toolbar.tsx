@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, Upload, Image, GitBranch, PanelLeft, PanelRight, Pencil } from 'lucide-react'
+import { Download, Upload, Image, GitBranch, GitBranchPlus, PanelLeft, PanelRight, Pencil } from 'lucide-react'
 import { useTree } from '../store/treeStore'
-import { exportTree, exportBranch, importFromFile } from '../io/exportImport'
-import { exportGraphPng } from '../io/exportImage'
+import { exportTree, exportBranch, importFromFile, importBranchFromFile } from '../io/exportImport'
 import { treeStats } from '../domain'
 import { BrandLogo } from '../components/BrandLogo'
 import { BranchIcon } from '../components/BranchIcon'
 import { VersionBadge } from '../components/VersionBadge'
+import { ExportPngDialog } from './ExportPngDialog'
 
 interface ToolbarProps {
   leftOpen: boolean
@@ -35,6 +35,7 @@ export function Toolbar({
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const [pngDialogOpen, setPngDialogOpen] = useState(false)
 
   useEffect(() => {
     if (renaming) {
@@ -54,6 +55,11 @@ export function Toolbar({
     if (!res) return
     if (res.kind === 'tree') replaceTree(res.tree)
     else appendItems(res.items)
+  }
+
+  async function onImportBranch(): Promise<void> {
+    const items = await importBranchFromFile()
+    if (items) appendItems(items)
   }
 
   return (
@@ -120,6 +126,14 @@ export function Toolbar({
         </button>
         <button
           className="tb-btn icon-only"
+          onClick={onImportBranch}
+          disabled={!tree}
+          title="Импорт ветки из JSON (всегда как новая ветка — без риска перезаписать текущее дерево и без конфликта id)"
+        >
+          <GitBranchPlus size={15} />
+        </button>
+        <button
+          className="tb-btn icon-only"
           onClick={() => tree && selectedBranch && exportBranch(tree, selectedBranch.id)}
           disabled={!selectedBranch}
           title="Экспорт выбранной ветки в JSON"
@@ -128,7 +142,7 @@ export function Toolbar({
         </button>
         <button
           className="tb-btn icon-only"
-          onClick={() => exportGraphPng(`${tree?.meta.name ?? 'skill-tree'}.png`)}
+          onClick={() => setPngDialogOpen(true)}
           disabled={!tree}
           title="Экспорт графа в PNG"
         >
@@ -143,6 +157,7 @@ export function Toolbar({
           <PanelRight size={17} />
         </button>
       </div>
+      {pngDialogOpen && <ExportPngDialog onClose={() => setPngDialogOpen(false)} />}
     </div>
   )
 }

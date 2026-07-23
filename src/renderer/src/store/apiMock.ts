@@ -31,7 +31,8 @@ export function installMockApi(): void {
         edgeAnim: 'breathing',
         recentDirs: [],
         fontMode: 'default',
-        customFont: null
+        customFont: null,
+        lastCustomFontByCategory: {}
       }),
     saveSettings: async (s: AppSettings) => set('mock:settings', s),
     getAppVersion: async () => '0.0.0-mock',

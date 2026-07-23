@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Minus, Maximize2, RotateCw, ChevronsDownUp, ChevronsUpDown, Check } from 'lucide-react'
+import { Plus, Minus, Maximize2, RotateCw, ChevronsDownUp, ChevronsUpDown, Check, Trash2 } from 'lucide-react'
 import { useTree } from '../store/treeStore'
 import { buildMaps, colorFor, collectDescendants, computeStatus, focusSet, ringCollapseIds } from '../domain'
 import { effectiveVariant, resolveTheme } from '../themes/apply'
@@ -51,6 +51,8 @@ export function GraphCanvas(): JSX.Element {
   const select = useTree((s) => s.select)
   const toggleChecklistEntry = useTree((s) => s.toggleChecklistEntry)
   const setManualDone = useTree((s) => s.setManualDone)
+  const deleteItem = useTree((s) => s.deleteItem)
+  const addChild = useTree((s) => s.addChild)
   const requestReveal = useTree((s) => s.requestReveal)
   // Мультивыделение из левого дерева — граф только подсвечивает, не управляет им.
   const multiSelected = useTree((s) => s.multiSelected)
@@ -700,6 +702,27 @@ export function GraphCanvas(): JSX.Element {
                   ))}
                 </ul>
               )}
+              <div className="node-popup-actions">
+                <button
+                  className="node-popup-action"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    addChild(n.item.id, 'node')
+                    closePopup()
+                  }}
+                >
+                  <Plus size={13} /> Создать узел
+                </button>
+                <button
+                  className="node-popup-action danger"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (confirm(`Удалить «${n.item.title}» и всё вложенное?`)) deleteItem(n.item.id)
+                  }}
+                >
+                  <Trash2 size={13} /> Удалить
+                </button>
+              </div>
             </div>
           )
         })()}
@@ -772,7 +795,7 @@ function rank(e: NodeEmphasis): number {
 }
 
 /** SVG-путь дуги окружности радиуса r от startAngle до endAngle. */
-function arcPath(r: number, a0: number, a1: number): string {
+export function arcPath(r: number, a0: number, a1: number): string {
   const x0 = Math.cos(a0) * r
   const y0 = Math.sin(a0) * r
   const x1 = Math.cos(a1) * r
