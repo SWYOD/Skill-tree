@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { X, Columns2, SquarePen } from 'lucide-react'
 import { renderMarkdown } from './markdown'
 import { LiveMarkdownEditor } from './LiveMarkdownEditor'
+import { useMarkdownContext } from './useMarkdownContext'
 
 interface Props {
   title: string
@@ -21,6 +22,7 @@ interface Props {
  */
 export function NoteEditorModal({ title, notePath, content, onChange, onClose }: Props): JSX.Element {
   const [viewMode, setViewMode] = useState<'split' | 'live'>('live')
+  const markdownCtx = useMarkdownContext()
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -69,7 +71,9 @@ export function NoteEditorModal({ title, notePath, content, onChange, onClose }:
               placeholder="# Заметки в markdown…"
               onChange={(e) => onChange(e.target.value)}
             />
-            <div className="note-area note-preview note-editor-modal-pane">{renderMarkdown(content)}</div>
+            <div className="note-area note-preview note-editor-modal-pane">
+              {renderMarkdown(content, markdownCtx)}
+            </div>
           </div>
         ) : (
           <div className="note-area note-editor-modal-pane note-editor-modal-live">

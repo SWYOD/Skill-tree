@@ -4,31 +4,13 @@ import { useTree } from '../store/treeStore'
 import type { Item } from '@shared/types'
 import { renderMarkdown } from './markdown'
 import { NoteEditorModal } from './NoteEditorModal'
-
-/** Символы, недопустимые в имени файла на диске, — заменяем дефисом. */
-function sanitizeFileName(s: string): string {
-  const cleaned = s
-    .trim()
-    .replace(/[/\\:*?"<>|]/g, '-')
-    .replace(/\s+/g, ' ')
-    .slice(0, 80)
-    .trim()
-  return cleaned || 'Заметка'
-}
-
-/**
- * Имя файла заметки — человекочитаемый заголовок + id узла суффиксом.
- * Суффикс держит имя уникальным (у двух узлов может быть одинаковый
- * заголовок) и стабильным при переименовании: меняется только «человеческая»
- * часть (см. эффект переименования ниже), id никогда не трогается.
- */
-function computeNotePath(id: string, title: string): string {
-  return `notes/${sanitizeFileName(title)}-${id}.md`
-}
+import { computeNotePath } from './path'
+import { useMarkdownContext } from './useMarkdownContext'
 
 export function NoteEditor({ item }: { item: Item }): JSX.Element {
   const rootDir = useTree((s) => s.settings.rootDir)
   const updateItem = useTree((s) => s.updateItem)
+  const markdownCtx = useMarkdownContext()
   const [content, setContent] = useState('')
   const [loaded, setLoaded] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -169,7 +151,7 @@ export function NoteEditor({ item }: { item: Item }): JSX.Element {
           }}
         />
       ) : (
-        <div className="note-area note-preview">{renderMarkdown(content)}</div>
+        <div className="note-area note-preview">{renderMarkdown(content, markdownCtx)}</div>
       )}
 
       <div className="note-path dim small">

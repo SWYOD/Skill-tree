@@ -185,6 +185,9 @@ export interface Api {
   readNote(rootDir: string, notePath: string): Promise<string>
   writeNote(rootDir: string, notePath: string, content: string): Promise<void>
   renameNote(rootDir: string, oldPath: string, newPath: string): Promise<void>
+  /** Эмбед изображения в заметке (![[img.png]] / ![alt](img.png)) — путь
+   *  относительно rootDir, возвращает data URL или null, если файла нет. */
+  readNoteImage(rootDir: string, relPath: string): Promise<string | null>
 
   // Импорт/экспорт
   exportJson(defaultName: string, data: unknown): Promise<boolean>

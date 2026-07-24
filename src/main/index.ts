@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, dirname } from 'path'
+import { join, dirname, extname } from 'path'
 import { promises as fs } from 'fs'
 import type { AppSettings, SkillTree } from '../shared/types'
 import { registerAutoUpdater, scheduleUpdateChecks } from './autoUpdater'
@@ -132,6 +132,34 @@ function registerIpc(): void {
       } catch {
         // Старого файла ещё не было (заметку ни разу не сохраняли) — переносить нечего,
         // новый файл появится сам при следующем note:write.
+      }
+    }
+  )
+
+  const IMAGE_MIME: Record<string, string> = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.bmp': 'image/bmp'
+  }
+
+  /** Эмбеды изображений в заметках (![[img.png]] / ![alt](img.png), см.
+   *  markdown.tsx) — путь считается относительно rootDir (там же лежат
+   *  notes/*.md). Отдаём как data URL, а не file://, чтобы не полагаться на
+   *  разрешение file:// в CSP рендерера. */
+  ipcMain.handle(
+    'note:read-image',
+    async (_e, rootDir: string, relPath: string): Promise<string | null> => {
+      const mime = IMAGE_MIME[extname(relPath).toLowerCase()]
+      if (!mime) return null
+      try {
+        const buf = await fs.readFile(join(rootDir, relPath))
+        return `data:${mime};base64,${buf.toString('base64')}`
+      } catch {
+        return null
       }
     }
   )

@@ -17,6 +17,8 @@ const api: Api = {
     ipcRenderer.invoke('note:write', rootDir, notePath, content),
   renameNote: (rootDir: string, oldPath: string, newPath: string) =>
     ipcRenderer.invoke('note:rename', rootDir, oldPath, newPath),
+  readNoteImage: (rootDir: string, relPath: string) =>
+    ipcRenderer.invoke('note:read-image', rootDir, relPath),
 
   exportJson: (defaultName: string, data: unknown) =>
     ipcRenderer.invoke('json:export', defaultName, data),

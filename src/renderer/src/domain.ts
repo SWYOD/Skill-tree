@@ -17,6 +17,16 @@ export interface DerivedMaps {
   childrenOf: Map<string | null, Item[]>
 }
 
+/** Ищет узел/ветку по заголовку заметки (или по названию элемента, если
+ *  свой заголовок заметки не задан) — резолв вики-ссылок [[Заголовок]] в
+ *  markdown-заметках между узлами дерева (см. MarkdownContext.resolveLink в
+ *  notes/markdown.tsx). Регистронезависимо, первое совпадение. */
+export function findItemByNoteTitle(items: Item[], title: string): Item | null {
+  const needle = title.trim().toLowerCase()
+  if (!needle) return null
+  return items.find((it) => (it.noteTitle ?? it.title).trim().toLowerCase() === needle) ?? null
+}
+
 /** Индексы: узел по id и упорядоченные дети по parentId. */
 export function buildMaps(items: Item[]): DerivedMaps {
   const byId = new Map<string, Item>()

@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Minus, Maximize2, RotateCw, ChevronsDownUp, ChevronsUpDown, Check, Trash2 } from 'lucide-react'
+import {
+  Plus,
+  Minus,
+  Maximize2,
+  RotateCw,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Check,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  FileText
+} from 'lucide-react'
 import { useTree } from '../store/treeStore'
 import { buildMaps, colorFor, collectDescendants, computeStatus, focusSet, ringCollapseIds } from '../domain'
 import { effectiveVariant, resolveTheme } from '../themes/apply'
@@ -9,6 +21,9 @@ import { NodeGlyph } from './NodeGlyph'
 import type { NodeEmphasis } from './NodeGlyph'
 import { EdgeLine } from './EdgeLine'
 import { Switch } from '../components/Switch'
+import { renderMarkdown } from '../notes/markdown'
+import { computeNotePath } from '../notes/path'
+import { useMarkdownContext } from '../notes/useMarkdownContext'
 import type { Item, ItemStatus } from '@shared/types'
 
 interface Transform {
@@ -69,6 +84,7 @@ export function GraphCanvas(): JSX.Element {
   const effectiveCollapsed = graphTreeLinked ? collapsed : graphCollapsed
   const setEffectiveCollapsed = graphTreeLinked ? setCollapsed : setGraphCollapsed
   const unlockMechanic = useTree((s) => s.settings.unlockMechanic)
+  const rootDir = useTree((s) => s.settings.rootDir)
   const edgeAnim = useTree((s) => s.settings.edgeAnim)
   const themeId = useTree((s) => s.settings.themeId)
   const customThemes = useTree((s) => s.settings.customThemes)
@@ -702,6 +718,7 @@ export function GraphCanvas(): JSX.Element {
                   ))}
                 </ul>
               )}
+              <NodePopupNote item={n.item} rootDir={rootDir} />
               <div className="node-popup-actions">
                 <button
                   className="node-popup-action"
@@ -792,6 +809,63 @@ export function GraphCanvas(): JSX.Element {
 /** Порядок отрисовки узлов по эмфазису: фокусный — поверх остальных. */
 function rank(e: NodeEmphasis): number {
   return { dimmed: 0, none: 1, related: 2, focused: 3 }[e]
+}
+
+/**
+ * Свёрнутое по умолчанию поле с отрендеренной заметкой узла прямо в поп-апе
+ * графа — не нужно открывать правую панель, чтобы прочитать заметку. Текст
+ * грузится лениво (только когда развернули), тем же IPC, что и NoteEditor —
+ * см. computeNotePath в notes/path.ts (та же логика вычисления пути, если у
+ * item ещё нет сохранённого notePath).
+ */
+function NodePopupNote({ item, rootDir }: { item: Item; rootDir: string | null }): JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+  const [content, setContent] = useState<string | null>(null)
+  const markdownCtx = useMarkdownContext()
+  const noteTitle = item.noteTitle ?? item.title
+  const notePath = item.notePath ?? computeNotePath(item.id, noteTitle)
+
+  useEffect(() => {
+    if (!expanded || !rootDir) return
+    let alive = true
+    setContent(null)
+    window.api.readNote(rootDir, notePath).then((c) => {
+      if (alive) setContent(c)
+    })
+    return () => {
+      alive = false
+    }
+  }, [expanded, rootDir, notePath])
+
+  return (
+    <div className="node-popup-note">
+      <button
+        className="node-popup-note-toggle"
+        onClick={(e) => {
+          e.stopPropagation()
+          setExpanded((v) => !v)
+        }}
+      >
+        <span className="node-popup-note-toggle-label">
+          <FileText size={13} /> Заметка
+        </span>
+        {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+      </button>
+      {expanded && (
+        <div className="node-popup-note-body" onClick={(e) => e.stopPropagation()}>
+          {!rootDir ? (
+            <span className="dim small">Директория дерева не выбрана.</span>
+          ) : content === null ? (
+            <span className="dim small">Загрузка…</span>
+          ) : content.trim() === '' ? (
+            <span className="dim small">Заметка пуста.</span>
+          ) : (
+            renderMarkdown(content, markdownCtx)
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** SVG-путь дуги окружности радиуса r от startAngle до endAngle. */

@@ -51,6 +51,7 @@ export function installMockApi(): void {
         ls.removeItem(k)
       }
     },
+    readNoteImage: async () => null,
     exportJson: async () => {
       console.info('[mock] exportJson')
       return true

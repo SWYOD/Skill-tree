@@ -15,9 +15,40 @@ function touchesRange(ranges: readonly SelectionRange[], from: number, to: numbe
 }
 
 // Порядок альтернатив важен: **bold** и ~~strike~~/==mark== должны проверяться
-// раньше одиночных */`_` , иначе `**x**` частично съедается как `*` + текст.
-const INLINE_RE =
-  /(\*\*([^*]+)\*\*|~~([^~]+)~~|==([^=]+)==|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*|_([^_]+)_)/g
+// раньше одиночных */`_`, а эмбеды (![[...]] / ![alt](url)) — раньше обычных
+// вики-ссылок/ссылок ([[...]] / [текст](url)), иначе ведущий ! «отваливается»
+// от них как отдельный символ (см. markdown.tsx — тот же порядок и тот же
+// набор синтаксиса, единый источник правды на оба режима просмотра). Флаг
+// 'd' — индексы вложенных групп (m.indices), нужны, чтобы точно знать, где
+// в исходном тексте начинается/заканчивается видимая часть (алиас/цель) для
+// сокрытия остального синтаксиса, см. markBracketed.
+const INLINE_RE = new RegExp(
+  [
+    '(?<bold>\\*\\*(?<boldText>[^*]+)\\*\\*)',
+    '(?<strike>~~(?<strikeText>[^~]+)~~)',
+    '(?<mark>==(?<markText>[^=]+)==)',
+    '(?<code>`(?<codeText>[^`]+)`)',
+    '(?<embed>!\\[\\[(?<embedTarget>[^\\]|]+)(?:\\|(?<embedAlias>[^\\]]+))?\\]\\])',
+    '(?<wikilink>\\[\\[(?<wikiTarget>[^\\]|]+)(?:\\|(?<wikiAlias>[^\\]]+))?\\]\\])',
+    '(?<image>!\\[(?<imgAlt>[^\\]]*)\\]\\((?<imgUrl>[^)]+)\\))',
+    '(?<link>\\[(?<linkText>[^\\]]+)\\]\\((?<linkUrl>[^)]+)\\))',
+    '(?<italicStar>\\*(?<italicStarText>[^*]+)\\*)',
+    '(?<italicUnd>_(?<italicUndText>[^_]+)_)'
+  ].join('|'),
+  'gd'
+)
+
+/** Живая подсветка таблиц — только построчная стилизация (фон/бордеры на
+ *  cm-table-line), БЕЗ полноценного рендера сетки в самом редакторе: это
+ *  оправданный компромисс для поля ВВОДА (в отличие от readonly-превью в
+ *  markdown.tsx, где таблица рисуется настоящим <table>) — во время печати
+ *  сырые | всё равно должны быть видны и редактируемы. */
+function isTableRowText(t: string): boolean {
+  return t.includes('|') && t.trim() !== ''
+}
+function isTableSepText(t: string): boolean {
+  return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(t)
+}
 
 function indentDepth(indent: string): number {
   const spaces = indent.replace(/\t/g, '  ').length
@@ -119,6 +150,7 @@ function buildDecorations(view: EditorView): DecorationSet {
   const doc = state.doc
   let calloutType: string | null = null
   let inFence = false
+  let inTable = false
   let listStack: ListFrame[] = []
 
   function markPair(from: number, to: number, markerLen: number, cls: string, touched: boolean): void {
@@ -131,29 +163,47 @@ function buildDecorations(view: EditorView): DecorationSet {
     builder.add(to - markerLen, to, Decoration.replace({}))
   }
 
-  function markLink(from: number, to: number, textLen: number, touched: boolean): void {
+  /** Общий случай «скрыть синтаксис, оставить видимой только подстроку
+   *  [labelFrom, labelTo)» — используется для ссылок/эмбедов/вики-ссылок, где
+   *  видимая часть (текст ссылки/алиас/цель) не обязательно начинается сразу
+   *  после фиксированного числа символов маркера (в отличие от markPair). */
+  function markBracketed(from: number, to: number, labelFrom: number, labelTo: number, cls: string, touched: boolean): void {
     if (touched) {
-      builder.add(from, to, Decoration.mark({ class: 'cm-link' }))
+      builder.add(from, to, Decoration.mark({ class: cls }))
       return
     }
-    builder.add(from, from + 1, Decoration.replace({}))
-    builder.add(from + 1, from + 1 + textLen, Decoration.mark({ class: 'cm-link' }))
-    builder.add(from + 1 + textLen, to, Decoration.replace({}))
+    if (labelFrom > from) builder.add(from, labelFrom, Decoration.replace({}))
+    builder.add(labelFrom, labelTo, Decoration.mark({ class: cls }))
+    if (labelTo < to) builder.add(labelTo, to, Decoration.replace({}))
   }
 
   function applyInline(text: string, lineStart: number, skipChars: number): void {
     INLINE_RE.lastIndex = skipChars
     let m: RegExpExecArray | null
     while ((m = INLINE_RE.exec(text))) {
+      const g = m.groups!
+      const idx = m.indices!.groups!
       const from = lineStart + m.index
       const to = lineStart + m.index + m[0].length
       const touched = touchesRange(ranges, from, to)
-      if (m[2] !== undefined) markPair(from, to, 2, 'cm-bold', touched)
-      else if (m[3] !== undefined) markPair(from, to, 2, 'cm-strike', touched)
-      else if (m[4] !== undefined) markPair(from, to, 2, 'cm-highlight', touched)
-      else if (m[5] !== undefined) markPair(from, to, 1, 'cm-code', touched)
-      else if (m[6] !== undefined) markLink(from, to, m[6].length, touched)
-      else if (m[8] !== undefined || m[9] !== undefined) markPair(from, to, 1, 'cm-italic', touched)
+      if (g.bold !== undefined) markPair(from, to, 2, 'cm-bold', touched)
+      else if (g.strike !== undefined) markPair(from, to, 2, 'cm-strike', touched)
+      else if (g.mark !== undefined) markPair(from, to, 2, 'cm-highlight', touched)
+      else if (g.code !== undefined) markPair(from, to, 1, 'cm-code', touched)
+      else if (g.embed !== undefined) {
+        const labelIdx = g.embedAlias !== undefined ? idx.embedAlias! : idx.embedTarget!
+        markBracketed(from, to, lineStart + labelIdx[0], lineStart + labelIdx[1], 'cm-embed', touched)
+      } else if (g.wikilink !== undefined) {
+        const labelIdx = g.wikiAlias !== undefined ? idx.wikiAlias! : idx.wikiTarget!
+        markBracketed(from, to, lineStart + labelIdx[0], lineStart + labelIdx[1], 'cm-wikilink', touched)
+      } else if (g.image !== undefined) {
+        const labelIdx = g.imgAlt.length > 0 ? idx.imgAlt! : idx.imgUrl!
+        markBracketed(from, to, lineStart + labelIdx[0], lineStart + labelIdx[1], 'cm-embed', touched)
+      } else if (g.link !== undefined) {
+        markBracketed(from, to, lineStart + idx.linkText![0], lineStart + idx.linkText![1], 'cm-link', touched)
+      } else if (g.italicStar !== undefined || g.italicUnd !== undefined) {
+        markPair(from, to, 1, 'cm-italic', touched)
+      }
     }
   }
 
@@ -164,12 +214,14 @@ function buildDecorations(view: EditorView): DecorationSet {
 
     if (text.trim() === '') {
       listStack = []
+      inTable = false
       continue
     }
 
     if (/^```/.test(text.trim())) {
       inFence = !inFence
       listStack = []
+      inTable = false
       builder.add(line.from, line.from, Decoration.line({ class: 'cm-fence-line' }))
       continue
     }
@@ -181,12 +233,32 @@ function buildDecorations(view: EditorView): DecorationSet {
     const h = /^(#{1,6})(\s+)/.exec(text)
     if (h) {
       listStack = []
+      inTable = false
       const level = Math.min(h[1].length, 4)
       builder.add(line.from, line.from, Decoration.line({ class: `cm-h cm-h${level}` }))
       if (!lineTouched) builder.add(line.from, line.from + h[0].length, Decoration.replace({}))
       applyInline(text, line.from, h[0].length)
       continue
     }
+
+    if (isTableRowText(text)) {
+      const nextText = i < doc.lines ? doc.line(i + 1).text : ''
+      const startsTable = !inTable && isTableSepText(nextText)
+      if (startsTable || inTable) {
+        listStack = []
+        const isSepLine = inTable && isTableSepText(text)
+        inTable = true
+        const cls = isSepLine
+          ? 'cm-table-line cm-table-sep-line'
+          : startsTable
+            ? 'cm-table-line cm-table-header-line'
+            : 'cm-table-line'
+        builder.add(line.from, line.from, Decoration.line({ class: cls }))
+        if (!isSepLine) applyInline(text, line.from, 0)
+        continue
+      }
+    }
+    inTable = false
 
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(text.trim())) {
       listStack = []
