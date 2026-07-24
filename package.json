@@ -1,6 +1,6 @@
 {
   "name": "skill-tree",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Персональный менеджер навыков в виде игрового дерева скиллов",
   "main": "./out/main/index.js",
   "author": "ilyatrubnikov",

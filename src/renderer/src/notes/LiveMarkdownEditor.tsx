@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { createElement, useEffect, useRef } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { EditorState, Prec, RangeSetBuilder } from '@codemirror/state'
 import type { SelectionRange } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap } from '@codemirror/view'
 import type { DecorationSet, ViewUpdate } from '@codemirror/view'
 import { minimalSetup } from 'codemirror'
+import { CALLOUT_META, calloutFallbackTitle } from './markdown'
 
 interface Props {
   value: string
@@ -38,16 +40,54 @@ const INLINE_RE = new RegExp(
   'gd'
 )
 
-/** Живая подсветка таблиц — только построчная стилизация (фон/бордеры на
- *  cm-table-line), БЕЗ полноценного рендера сетки в самом редакторе: это
- *  оправданный компромисс для поля ВВОДА (в отличие от readonly-превью в
- *  markdown.tsx, где таблица рисуется настоящим <table>) — во время печати
- *  сырые | всё равно должны быть видны и редактируемы. */
+/** Таблицы и каллауты в живом редакторе рисуются БЕЗ многострочных block-
+ *  виджетов — попытка сделать полноценный <table>/.md-callout через
+ *  Decoration.replace({block:true}) ломала внутренний расчёт координат
+ *  курсора CodeMirror (coordsAtPos падал независимо от того, где реально
+ *  стоял курсор — похоже на баг во взаимодействии block-виджетов с
+ *  RectangleMarker/drawSelection в этой версии). Вместо этого — построчные
+ *  ТОЧЕЧНЫЕ decorations (mark/replace/widget с side, а не block) — тот же
+ *  проверенный приём, что уже используют чек-боксы/буллеты ниже: таблица
+ *  выравнивается инлайн-ячейками через flex (см. applyTableCells), у
+ *  каллаута рамка-карточка собирается через border-radius на крайних
+ *  строках блока (см. cm-callout-first/-last) + точечная иконка. Настоящая
+ *  многострочная типографика (полный <table>, инлайн-форматирование внутри
+ *  ячеек и т.д.) — в readonly-превью markdown.tsx, через режим «Сплит». */
 function isTableRowText(t: string): boolean {
   return t.includes('|') && t.trim() !== ''
 }
 function isTableSepText(t: string): boolean {
   return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(t)
+}
+type Align = 'left' | 'center' | 'right'
+function splitTableRow(line: string): string[] {
+  let t = line.trim()
+  if (t.startsWith('|')) t = t.slice(1)
+  if (t.endsWith('|')) t = t.slice(0, -1)
+  return t.split('|').map((c) => c.trim())
+}
+function parseAlignLive(cell: string): Align | null {
+  const left = cell.startsWith(':')
+  const right = cell.endsWith(':')
+  if (left && right) return 'center'
+  if (right) return 'right'
+  if (left) return 'left'
+  return null
+}
+
+/** SVG-иконка каллаута — рендерится один раз на kind (иконки статичны) через
+ *  renderToStaticMarkup, т.к. WidgetType.toDOM() отдаёт голый DOM-элемент, а
+ *  не JSX — полноценный React-рут поверх декорации CodeMirror был бы кратно
+ *  сложнее (нужно было бы вручную гонять жизненный цикл рута вместе с
+ *  пересозданием виджетов при каждом ре-билде decorations). */
+const calloutIconHtmlCache = new Map<string, string>()
+function calloutIconHtml(kind: string): string {
+  const cached = calloutIconHtmlCache.get(kind)
+  if (cached) return cached
+  const meta = CALLOUT_META[kind] ?? CALLOUT_META.note
+  const html = renderToStaticMarkup(createElement(meta.icon, { size: 14 }))
+  calloutIconHtmlCache.set(kind, html)
+  return html
 }
 
 function indentDepth(indent: string): number {
@@ -123,6 +163,63 @@ class TaskCheckboxWidget extends WidgetType {
   }
 }
 
+/** Точечная иконка каллаута — вставляется сразу после скрытого маркера
+ *  [!kind] на первой строке блока (см. buildDecorations). Точечный widget
+ *  (не replace/block) — тот же безопасный паттерн, что и у чек-боксов/
+ *  буллетов выше. */
+class CalloutIconWidget extends WidgetType {
+  constructor(readonly kind: string) {
+    super()
+  }
+  eq(other: WidgetType): boolean {
+    return other instanceof CalloutIconWidget && other.kind === this.kind
+  }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = 'cm-callout-icon'
+    span.innerHTML = calloutIconHtml(this.kind)
+    return span
+  }
+}
+
+/** Заголовок каллаута, когда в исходнике после [!kind] нет собственного
+ *  текста (например `> [!warning]` без ничего дальше на той же строке) —
+ *  тот же фолбэк-лейбл, что и в readonly-превью (см. calloutFallbackTitle в
+ *  markdown.tsx), иначе в живом режиме такая строка осталась бы без всякого
+ *  видимого заголовка (только иконка), в отличие от «Сплита». */
+class CalloutTitleWidget extends WidgetType {
+  constructor(readonly text: string) {
+    super()
+  }
+  eq(other: WidgetType): boolean {
+    return other instanceof CalloutTitleWidget && other.text === this.text
+  }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = 'cm-callout-title-text'
+    span.textContent = this.text
+    return span
+  }
+}
+
+/** Пустая ячейка таблицы (`| |`) — Decoration.mark не может «отметить» нулевую
+ *  длину, поэтому для пустых ячеек резервируем колонку точечным виджетом
+ *  вместо mark-декорации (см. applyTableCells). */
+class EmptyCellWidget extends WidgetType {
+  constructor(readonly width: number) {
+    super()
+  }
+  eq(other: WidgetType): boolean {
+    return other instanceof EmptyCellWidget && other.width === this.width
+  }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = 'cm-table-cell'
+    span.style.width = `${this.width}ch`
+    return span
+  }
+}
+
 interface ListFrame {
   depth: number
   ordered: boolean
@@ -151,6 +248,13 @@ function buildDecorations(view: EditorView): DecorationSet {
   let calloutType: string | null = null
   let inFence = false
   let inTable = false
+  // Ширина (символов) и выравнивание каждой колонки текущей таблицы —
+  // считаются один раз на строке шапки (см. isTableRowText ниже) и
+  // переиспользуются на всех последующих строках ЭТОЙ таблицы, чтобы
+  // колонки у всех строк были одной ширины (иначе каждая строка
+  // выравнивалась бы по своему собственному контенту).
+  let tableColWidths: number[] = []
+  let tableColAligns: (Align | null)[] = []
   let listStack: ListFrame[] = []
 
   function markPair(from: number, to: number, markerLen: number, cls: string, touched: boolean): void {
@@ -175,6 +279,45 @@ function buildDecorations(view: EditorView): DecorationSet {
     if (labelFrom > from) builder.add(from, labelFrom, Decoration.replace({}))
     builder.add(labelFrom, labelTo, Decoration.mark({ class: cls }))
     if (labelTo < to) builder.add(labelTo, to, Decoration.replace({}))
+  }
+
+  /** Разбирает строку таблицы на ячейки прямо по позициям в исходном тексте
+   *  (без реального <table>) и для каждой: прячет разделители `|` и внешние
+   *  пробелы через Decoration.replace, а видимое содержимое оборачивает в
+   *  cm-table-cell с шириной колонки (см. tableColWidths) — .cm-table-line
+   *  выставлен в CSS как flex-строка, так что колонки визуально выравниваются
+   *  без DOM-таблицы и без многострочных block-декораций. */
+  function applyTableCells(text: string, lineStart: number): void {
+    const len = text.length
+    let pos = 0
+    if (text[pos] === '|') {
+      builder.add(lineStart + pos, lineStart + pos + 1, Decoration.replace({}))
+      pos += 1
+    }
+    let col = 0
+    while (pos <= len && col < tableColWidths.length) {
+      let end = text.indexOf('|', pos)
+      if (end === -1) end = len
+      const cell = text.slice(pos, end)
+      const trimmed = cell.trim()
+      const leadingWs = cell.length - cell.trimStart().length
+      const trailingWs = cell.length - cell.trimEnd().length
+      const contentFrom = lineStart + pos + leadingWs
+      const contentTo = lineStart + end - trailingWs
+      const width = tableColWidths[col]
+      const align = tableColAligns[col]
+      const style = `min-width:${width}ch${align ? `;text-align:${align}` : ''}`
+      if (leadingWs > 0) builder.add(lineStart + pos, contentFrom, Decoration.replace({}))
+      if (trimmed.length > 0) {
+        builder.add(contentFrom, contentTo, Decoration.mark({ class: 'cm-table-cell', attributes: { style } }))
+      } else {
+        builder.add(contentFrom, contentFrom, Decoration.widget({ widget: new EmptyCellWidget(width), side: 0 }))
+      }
+      if (trailingWs > 0) builder.add(contentTo, lineStart + end, Decoration.replace({}))
+      if (end < len) builder.add(lineStart + end, lineStart + end + 1, Decoration.replace({}))
+      pos = end + 1
+      col += 1
+    }
   }
 
   function applyInline(text: string, lineStart: number, skipChars: number): void {
@@ -215,6 +358,11 @@ function buildDecorations(view: EditorView): DecorationSet {
     if (text.trim() === '') {
       listStack = []
       inTable = false
+      // Пустая строка закрывает текущий блок цитаты/каллаута — без сброса
+      // следующий `> [!kind]` считался бы «продолжением» уже закрытого блока
+      // (calloutType оставался бы старым) и не получал бы свою иконку/рамку
+      // cm-callout-first, т.к. isFirstCalloutLine проверяет calloutType===null.
+      calloutType = null
       continue
     }
 
@@ -244,6 +392,26 @@ function buildDecorations(view: EditorView): DecorationSet {
     if (isTableRowText(text)) {
       const nextText = i < doc.lines ? doc.line(i + 1).text : ''
       const startsTable = !inTable && isTableSepText(nextText)
+      if (startsTable) {
+        // Ширины колонок считаем один раз, на строке шапки, заглядывая
+        // вперёд по всем строкам таблицы — нужны сразу для ВСЕХ строк (в т.ч.
+        // ещё не дошедших до цикла), поэтому кладём в tableColWidths и держим,
+        // пока inTable не сбросится (см. applyTableCells ниже).
+        const header = splitTableRow(text)
+        let j = i + 2
+        const bodyRows: string[][] = []
+        while (j <= doc.lines) {
+          const rowText = doc.line(j).text
+          if (!isTableRowText(rowText) || isTableSepText(rowText)) break
+          bodyRows.push(splitTableRow(rowText))
+          j++
+        }
+        tableColWidths = header.map((h, ci) => {
+          const cells = [h, ...bodyRows.map((r) => r[ci] ?? '')]
+          return Math.max(...cells.map((c) => c.length), 3)
+        })
+        tableColAligns = splitTableRow(nextText).map(parseAlignLive)
+      }
       if (startsTable || inTable) {
         listStack = []
         const isSepLine = inTable && isTableSepText(text)
@@ -254,11 +422,23 @@ function buildDecorations(view: EditorView): DecorationSet {
             ? 'cm-table-line cm-table-header-line'
             : 'cm-table-line'
         builder.add(line.from, line.from, Decoration.line({ class: cls }))
-        if (!isSepLine) applyInline(text, line.from, 0)
+        if (isSepLine) {
+          // Строка-разделитель (|---|---|) в живом режиме не несёт полезной
+          // информации сама по себе (её роль — граница между шапкой и телом
+          // таблицы, см. .cm-table-header-line/border в CSS) — прячем её
+          // текст, пока курсор не встанет прямо на неё для редактирования.
+          if (!lineTouched) builder.add(line.from, line.to, Decoration.replace({}))
+        } else if (!lineTouched) {
+          applyTableCells(text, line.from)
+        } else {
+          applyInline(text, line.from, 0)
+        }
         continue
       }
     }
     inTable = false
+    tableColWidths = []
+    tableColAligns = []
 
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(text.trim())) {
       listStack = []
@@ -271,17 +451,57 @@ function buildDecorations(view: EditorView): DecorationSet {
       listStack = []
       const rest = text.slice(q[0].length)
       const calloutMatch = /^\[!([\w-]+)\]\s*/.exec(rest)
+      const isFirstCalloutLine = !!calloutMatch && calloutType === null
       if (calloutMatch) calloutType = calloutMatch[1].toLowerCase()
+      // Последняя строка ЭТОГО каллаута — следующая строка уже не цитата
+      // (или её нет). Нужно для рамки-«карточки» (border-radius сверху/снизу
+      // только на крайних строках блока, см. .cm-callout-first/-last) — тот
+      // же прямоугольный контур, что у .md-callout в превью, но БЕЗ риска
+      // многострочных block-виджетов (те ломали внутренний расчёт координат
+      // курсора CodeMirror независимо от того, где реально стоял курсор).
+      const nextIsQuote = i < doc.lines && /^>\s?/.test(doc.line(i + 1).text)
       // md-callout-* переиспользует те же --callout-color переменные, что и
       // превью (см. markdown.tsx/.md-callout-* в styles.css) — один источник
       // цветов на оба режима просмотра.
       const cls = calloutType
-        ? `cm-quote-line cm-callout-line md-callout-${calloutType}`
+        ? [
+            'cm-quote-line',
+            'cm-callout-line',
+            `md-callout-${calloutType}`,
+            isFirstCalloutLine ? 'cm-callout-first' : '',
+            !nextIsQuote ? 'cm-callout-last' : ''
+          ]
+            .filter(Boolean)
+            .join(' ')
         : 'cm-quote-line'
       builder.add(line.from, line.from, Decoration.line({ class: cls }))
       let skip = q[0].length
       if (calloutMatch) skip += calloutMatch[0].length
-      if (!lineTouched) builder.add(line.from, line.from + skip, Decoration.replace({}))
+      if (!lineTouched) {
+        builder.add(line.from, line.from + skip, Decoration.replace({}))
+        // Иконка каллаута — точечный (не multi-line replace) виджет сразу
+        // после скрытого маркера, только на первой строке блока.
+        if (isFirstCalloutLine) {
+          builder.add(
+            line.from + skip,
+            line.from + skip,
+            Decoration.widget({ widget: new CalloutIconWidget(calloutType!), side: -1 })
+          )
+          // rest после вычета маркера [!kind] — если там пусто, значит своего
+          // текста заголовка нет и нужен синтетический (как в Сплите).
+          const titleRest = rest.slice(calloutMatch![0].length).trim()
+          if (titleRest === '') {
+            builder.add(
+              line.from + skip,
+              line.from + skip,
+              Decoration.widget({
+                widget: new CalloutTitleWidget(calloutFallbackTitle(calloutType!, calloutMatch![1])),
+                side: 0
+              })
+            )
+          }
+        }
+      }
       applyInline(text, line.from, skip)
       continue
     }

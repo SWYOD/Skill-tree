@@ -2259,15 +2259,25 @@ textarea {
   font-style: italic;
 }
 .cm-table-line {
+  display: flex;
   font-family: 'SF Mono', ui-monospace, monospace;
   font-size: 0.95em;
 }
 .cm-table-header-line {
   color: var(--text);
   font-weight: 700;
+  border-bottom: 1px solid var(--border);
 }
 .cm-table-sep-line {
   color: var(--text-faint);
+  min-height: 1px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.cm-table-cell {
+  display: inline-block;
+  padding: 2px 10px 2px 0;
+  white-space: pre;
 }
 .cm-strike {
   text-decoration: line-through;
@@ -2317,8 +2327,42 @@ textarea {
   color: var(--text-dim);
 }
 .cm-callout-line {
+  border-left-width: 3px;
   border-left-color: var(--callout-color, var(--accent));
   background: color-mix(in srgb, var(--callout-color, var(--accent)) 8%, transparent);
+  color: var(--callout-color, var(--accent));
+  font-weight: 650;
+}
+.cm-callout-line + .cm-callout-line {
+  font-weight: 400;
+  color: var(--text-dim);
+}
+/* Рамка-«карточка» из border-radius на крайних строках блока — тот же
+   визуальный контур, что у .md-callout в превью (см. markdown.tsx), но без
+   многострочных block-декораций (см. комментарий у buildDecorations выше). */
+.cm-callout-first {
+  border-top: 1px solid color-mix(in srgb, var(--callout-color, var(--accent)) 40%, var(--border-strong));
+  border-top-left-radius: 9px;
+  border-top-right-radius: 9px;
+  padding-top: 6px;
+}
+.cm-callout-last {
+  border-bottom: 1px solid color-mix(in srgb, var(--callout-color, var(--accent)) 40%, var(--border-strong));
+  border-bottom-left-radius: 9px;
+  border-bottom-right-radius: 9px;
+  padding-bottom: 6px;
+}
+.cm-callout-icon {
+  display: inline-flex;
+  vertical-align: -2px;
+  margin-right: 5px;
+}
+.cm-callout-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.cm-callout-title-text {
+  font-weight: 650;
 }
 .cm-hr-line {
   color: var(--text-faint);

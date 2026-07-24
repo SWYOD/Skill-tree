@@ -79,7 +79,7 @@ type Block =
  *  (иконка lucide-lightbulb, цвет rgb(233, 151, 63)). Сами цвета — в
  *  styles.css (.md-callout-*), здесь только иконка и дефолтный заголовок
  *  (когда после [!kind] на той же строке ничего не написано). */
-const CALLOUT_META: Record<string, { icon: LucideIcon; label: string }> = {
+export const CALLOUT_META: Record<string, { icon: LucideIcon; label: string }> = {
   note: { icon: Pencil, label: 'Note' },
   abstract: { icon: ClipboardList, label: 'Abstract' },
   summary: { icon: ClipboardList, label: 'Summary' },
@@ -113,7 +113,7 @@ const CALLOUT_META: Record<string, { icon: LucideIcon; label: string }> = {
 /** «Заголовок по умолчанию» для каллаута — если после [!kind] в той же
  *  строке ничего не написано: реальный лейбл, если kind известен, иначе имя
  *  самого kind с заглавной буквы (а не голый нижний регистр из regexp). */
-function calloutFallbackTitle(kind: string, raw: string): string {
+export function calloutFallbackTitle(kind: string, raw: string): string {
   const meta = CALLOUT_META[kind]
   if (meta) return meta.label
   return raw.charAt(0).toUpperCase() + raw.slice(1)

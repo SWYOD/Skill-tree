@@ -52,6 +52,14 @@ export function BranchProgressChart(): JSX.Element | null {
               totalItems > 0 && partialPct > 0
                 ? Math.min(100, Math.max(partialPct, solidHeight + 4))
                 : 0
+            // Подпись «призрачного» процента печатается НАД точкой bottom:X% —
+            // на высоких значениях (около 100%) она вылезала за верхний край
+            // трека и накладывалась на основной процент (тот — отдельная
+            // строка ВЫШЕ трека, см. .branch-chart-pct). Ограничиваем позицию
+            // именно ПОДПИСИ (не саму заливку — та остаётся точной высотой),
+            // оставляя гарантированный зазор под её высоту у трека 64px
+            // (см. .branch-chart-track в styles.css).
+            const ghostLabelPct = Math.min(ghostHeight, 78)
             return (
               <button
                 key={b.id}
@@ -72,7 +80,7 @@ export function BranchProgressChart(): JSX.Element | null {
                   {ghostHeight > 0 && partialPct < 100 && (
                     <span
                       className="branch-chart-partial-pct"
-                      style={{ bottom: `${ghostHeight}%`, color }}
+                      style={{ bottom: `${ghostLabelPct}%`, color }}
                     >
                       {partialPct}%
                     </span>
